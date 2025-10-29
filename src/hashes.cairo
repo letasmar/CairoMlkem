@@ -19,24 +19,82 @@ const KECCAK_ROUNDS: usize = 24;
 
 // use keccak::keccak_sponge_hash;
 
-pub fn sha3_256(input: @Array<u8>) -> Array<u8> {
+pub fn sha3_256(mut input: Array<u8>) -> Array<u8> {
     keccak_sponge_hash(input, SHA3_256_RATE_BYTES, SHA3_256_DOMAIN, SHA3_256_OUTLEN)
 }
 
-pub fn sha3_512(input: @Array<u8>) -> Array<u8> {
+pub fn sha3_512(mut input: Array<u8>) -> Array<u8> {
     keccak_sponge_hash(input, SHA3_512_RATE_BYTES, SHA3_512_DOMAIN, SHA3_512_OUTLEN)
 }
 
-pub fn shake128_xof(input: @Array<u8>, out_len: usize) -> Array<u8> {
+pub fn shake128_xof(mut input: Array<u8>, out_len: usize) -> Array<u8> {
     keccak_sponge_hash(input, SHAKE128_RATE_BYTES, SHAKE128_DOMAIN, out_len)
 }
 
-pub fn shake256_xof(input: @Array<u8>, out_len: usize) -> Array<u8> {
+pub fn shake256_xof(mut input: Array<u8>, out_len: usize) -> Array<u8> {
     keccak_sponge_hash(input, SHAKE256_RATE_BYTES, SHAKE256_DOMAIN, out_len)
 }
-fn keccak_sponge_hash(input: @Array<u8>, rate_bytes : usize, domain : u8, out_len: usize) -> Array<u8> {
+fn keccak_sponge_hash(mut input: Array<u8>, rate_bytes : usize, domain : u8, out_len: usize) -> Array<u8> {
     ArrayTrait::new()
 }
+
+fn keccak_f(s: Span<Word64> ) -> Array<Word64>{
+
+    let piln = get_keccak_piln().span();
+    let rotc = get_keccak_rot().span();
+    let rndc = get_keccak_rndc().span();
+
+    for round in 0..24{
+        // theta
+        let mut bc: Array<Word64> = ArrayTrait::new();
+        for i in 0..5 {
+            bc.append( s[i] ^ s[i + 5] ^ s[i + 10] ^ s[i + 15] ^ s[i + 20]);
+        }
+        for i in 0..5{
+            let t = bc[(i + 4) % 5] ^ bc[(i + 1) % 5].rotl(1);
+            for j in 0..5 {
+                s[j*5 + i] = s[j*5 + i] ^ t;
+            }
+        }
+        //rho & pi
+        let mut t = s[1];
+        for i in 0..24 {
+            let j = piln[i];
+            let tmp = s[j];
+            s[j] = t.rotl(rotc[i]);
+            t = tmp;
+        }
+        // Chi
+        for j in 0..5 {
+            let a0 = s[j*5 + 0];
+            let a1 = s[j*5 + 1];
+            let a2 = s[j*5 + 2];
+            let a3 = s[j*5 + 3];
+            let a4 = s[j*5 + 4];
+            s[j*5 + 0] = a0 ^ ((!a1) & a2);
+            s[j*5 + 1] = a1 ^ ((!a2) & a3);
+            s[j*5 + 2] = a2 ^ ((!a3) & a4);
+            s[j*5 + 3] = a3 ^ ((!a4) & a0);
+            s[j*5 + 4] = a4 ^ ((!a0) & a1);
+        }
+        // iota
+        let iota : Word64 = rndc[round];
+        s[0] = s[0] ^ iota;
+    }
+    let mut res = ArrayTrait::new();
+    for i in 0..s.len(){
+        res.append(s[i]);
+    }
+    array![]
+}
+
+
+
+
+
+
+
+
 
 // the following is pasted from sha512
 use crate::opt_math::{OptBitShift, OptWrapping};
@@ -46,7 +104,6 @@ use core::traits::{BitAnd, BitOr, BitXor, BitNot};
 // Variable naming is compliant to RFC-6234 (https://datatracker.ietf.org/doc/html/rfc6234)
 
 pub const SHA512_LEN: usize = 64;
-
 pub const U64_BIT_NUM: u64 = 64;
 
 // Powers of two to avoid recomputing
