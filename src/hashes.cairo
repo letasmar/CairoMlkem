@@ -1,4 +1,7 @@
 // mod keccak;
+use crate::opt_math::{OptBitShift, OptWrapping};
+use core::num::traits::{Bounded, WrappingAdd};
+use core::traits::{BitAnd, BitOr, BitXor, BitNot};
 
 const SHA3_256_RATE_BYTES: usize = 136;
 const SHA3_256_DOMAIN: u8 = 0x06;
@@ -38,54 +41,86 @@ fn keccak_sponge_hash(mut input: Array<u8>, rate_bytes : usize, domain : u8, out
     ArrayTrait::new()
 }
 
-fn keccak_f(s: Span<Word64> ) -> Array<Word64>{
+fn set_array_at<T, +Copy<T>, +Drop<T>>(arr: Array<T>, index: usize, new_val: T) -> Array<T> {
+    let mut new_arr = ArrayTrait::new();
+    let len = arr.len();
 
+    for i in 0..len {
+        if i == index {
+            new_arr.append(new_val);
+        } else {
+            new_arr.append(*arr.at(i));
+        }
+    }
+    new_arr
+}
+fn keccak_f(mut s: Array<Word64> ) -> Array<Word64>{
     let piln = get_keccak_piln().span();
     let rotc = get_keccak_rot().span();
     let rndc = get_keccak_rndc().span();
 
-    for round in 0..24{
+    let mut round = 0;
+    while round < 24{
         // theta
         let mut bc: Array<Word64> = ArrayTrait::new();
-        for i in 0..5 {
-            bc.append( s[i] ^ s[i + 5] ^ s[i + 10] ^ s[i + 15] ^ s[i + 20]);
+        let mut i = 0;
+        while i < 5 {
+            bc.append( *s[i] ^ *s[i + 5] ^ *s[i + 10] ^ *s[i + 15] ^ *s[i + 20]);
+            i+=1;
         }
-        for i in 0..5{
-            let t = bc[(i + 4) % 5] ^ bc[(i + 1) % 5].rotl(1);
-            for j in 0..5 {
-                s[j*5 + i] = s[j*5 + i] ^ t;
+        i = 0;
+        while i < 5 {
+            let t = *bc[(i + 4) % 5] ^ (*bc[(i + 1) % 5]).rotl(1);
+            let mut j = 0;
+            while j < 5 {
+                // s[j*5 + i] = s[j*5 + i] ^ t;
+                // s = set_array_at(s, j*5+1, *s[j*5 + i] ^ t);
+                let lane = *s[j*5 + i];        // get the element first
+                let new_val = lane ^ t;        // compute
+                s = set_array_at(s, j*5 + 1, new_val); // update
+                j+= 1;
             }
+            i+= 1;
         }
         //rho & pi
-        let mut t = s[1];
-        for i in 0..24 {
-            let j = piln[i];
-            let tmp = s[j];
-            s[j] = t.rotl(rotc[i]);
-            t = tmp;
+        let mut t = *s[1];
+        i = 0;
+        while i < 24 {
+            let j = *piln[i];
+            let j64 : u64 = j.into();
+            let tmp = s[1];
+            s = set_array_at(s, j64.try_into().unwrap(), t.rotl((*rotc[i]).into()));
+            t = *tmp;
+            i += 1;
         }
         // Chi
-        for j in 0..5 {
-            let a0 = s[j*5 + 0];
-            let a1 = s[j*5 + 1];
-            let a2 = s[j*5 + 2];
-            let a3 = s[j*5 + 3];
-            let a4 = s[j*5 + 4];
-            s[j*5 + 0] = a0 ^ ((!a1) & a2);
-            s[j*5 + 1] = a1 ^ ((!a2) & a3);
-            s[j*5 + 2] = a2 ^ ((!a3) & a4);
-            s[j*5 + 3] = a3 ^ ((!a4) & a0);
-            s[j*5 + 4] = a4 ^ ((!a0) & a1);
+        let mut j = 0;
+        while j < 5 {
+        // for j in 0..5 {
+            let a0 = *s[j*5 + 0];
+            let a1 = *s[j*5 + 1];
+            let a2 = *s[j*5 + 2];
+            let a3 = *s[j*5 + 3];
+            let a4 = *s[j*5 + 4];
+            s = set_array_at(s, j*5 + 0, a0 ^ ((~a1) & a2));
+            s = set_array_at(s, j*5 + 1, a1 ^ ((~a2) & a3));
+            s = set_array_at(s, j*5 + 2, a2 ^ ((~a3) & a4));
+            s = set_array_at(s, j*5 + 3, a3 ^ ((~a4) & a0));
+            s = set_array_at(s, j*5 + 4, a4 ^ ((~a0) & a1));
+            j += 1;
         }
         // iota
-        let iota : Word64 = rndc[round];
-        s[0] = s[0] ^ iota;
+        let iota : Word64 = *rndc[round];
+        // s = set_array_at(s, 0, *s[0] ^ iota);
+        let lane = *s[0]^iota;
+        let new_val = lane ^ t;
+        s = set_array_at(s, 0, new_val);
+
+        round += 1;
     }
-    let mut res = ArrayTrait::new();
-    for i in 0..s.len(){
-        res.append(s[i]);
-    }
-    array![]
+    let res = s;
+    res
+    // array![s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24]
 }
 
 
@@ -97,9 +132,7 @@ fn keccak_f(s: Span<Word64> ) -> Array<Word64>{
 
 
 // the following is pasted from sha512
-use crate::opt_math::{OptBitShift, OptWrapping};
-use core::num::traits::{Bounded, WrappingAdd};
-use core::traits::{BitAnd, BitOr, BitXor, BitNot};
+
 
 // Variable naming is compliant to RFC-6234 (https://datatracker.ietf.org/doc/html/rfc6234)
 
