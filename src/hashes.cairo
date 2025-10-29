@@ -79,7 +79,7 @@ fn keccak_sponge_hash(mut input: Array<u8>, rate_bytes : usize, domain : u8, out
     }
     
     // Padding phase
-    let current_pos = if input_pos < input_len { input_len - input_pos } else { 0 };
+    let current_pos = input_len % rate_bytes;
     
     // Add domain suffix
     let state_val = *state.at(current_pos);
@@ -115,7 +115,7 @@ fn keccak_sponge_hash(mut input: Array<u8>, rate_bytes : usize, domain : u8, out
         // Copy state to output
         let mut j: usize = 0;
         while j < block_size {
-            output.append(*state.at(output_pos + j));
+            output.append(*state.at(j));
             j += 1;
         }
         
@@ -133,9 +133,9 @@ fn keccak_sponge_hash(mut input: Array<u8>, rate_bytes : usize, domain : u8, out
 }
 
 fn keccak_f_state_permute(state : Array<u8>) -> Array<u8>{
-    let mut tmp = from_u8Array_to_WordArray(state);
+    let mut tmp = from_u8Array_to_WordArray_Le(state);
     let mut tmp2 = keccak_f(tmp);
-    from_WordArray_to_u8array(tmp2.span())
+    from_WordArray_to_u8array_Le(tmp2.span())
 }
 
 fn set_array_at<T, +Copy<T>, +Drop<T>>(arr: Array<T>, index: usize, new_val: T) -> Array<T> {
@@ -175,7 +175,7 @@ fn keccak_f(mut s: Array<Word64> ) -> Array<Word64>{
                 // s = set_array_at(s, j*5+1, *s[j*5 + i] ^ t);
                 let lane = *s[j*5 + i];        // get the element first
                 let new_val = lane ^ t;        // compute
-                s = set_array_at(s, j*5 + 1, new_val); // update
+                s = set_array_at(s, j*5 + i, new_val); // update
                 j+= 1;
             }
             i+= 1;
@@ -186,7 +186,7 @@ fn keccak_f(mut s: Array<Word64> ) -> Array<Word64>{
         while i < 24 {
             let j = *piln[i];
             let j64 : u64 = j.into();
-            let tmp = s[1];
+            let tmp = s[j64.try_into().unwrap()];
             s = set_array_at(s, j64.try_into().unwrap(), t.rotl((*rotc[i]).into()));
             t = *tmp;
             i += 1;
@@ -210,8 +210,8 @@ fn keccak_f(mut s: Array<Word64> ) -> Array<Word64>{
         // iota
         let iota : Word64 = *rndc[round];
         // s = set_array_at(s, 0, *s[0] ^ iota);
-        let lane = *s[0]^iota;
-        let new_val = lane ^ t;
+        let new_val = *s[0]^iota;
+        // let new_val = lane ^ t;
         s = set_array_at(s, 0, new_val);
 
         round += 1;
@@ -420,11 +420,70 @@ fn from_u8Array_to_WordArray(data: Array<u8>) -> Array<Word64> {
     new_arr
 }
 
+/// Little Endian Converts byte array to Word64 array for SHA-512 processing
+/// #### Arguments
+/// * `data` - Array of u8 bytes to convert
+/// #### Returns
+/// * `Array<Word64>` - Array of Word64 values (8 bytes per word)
+fn from_u8Array_to_WordArray_Le(data: Array<u8>) -> Array<Word64> {
+    let mut new_arr: Array<Word64> = array![];
+    let mut i = 0;
+
+    // Use precomputed powers of 2 for shift left to avoid recomputation
+    // Safe to use u64 coz we shift u8 to the left by max 56 bits in u64
+    while (i < data.len()) {
+        let new_word: u64 = 
+            math_shl_precomputed((*data[i + 0]).into(), TWO_POW_0) +
+            math_shl_precomputed((*data[i + 1]).into(), TWO_POW_8) +
+            math_shl_precomputed((*data[i + 2]).into(), TWO_POW_16) +
+            math_shl_precomputed((*data[i + 3]).into(), TWO_POW_24) +
+            math_shl_precomputed((*data[i + 4]).into(), TWO_POW_32) +
+            math_shl_precomputed((*data[i + 5]).into(), TWO_POW_40) +
+            math_shl_precomputed((*data[i + 6]).into(), TWO_POW_48) +
+            math_shl_precomputed((*data[i + 7]).into(), TWO_POW_56);
+        new_arr.append(Word64 { data: new_word });
+        i += 8;
+    }
+    new_arr
+}
+
 // Shift left with precomputed powers of 2
 fn math_shl_precomputed<T, +Mul<T>, +Rem<T>, +Drop<T>, +Copy<T>, +Into<T, u128>>(
     x: T, two_power_n: T,
 ) -> T {
     x * two_power_n
+}
+
+/// Little Endian Converts Word64 array back to byte array for final hash output
+/// #### Arguments
+/// * `data` - Span of Word64 values to convert
+/// #### Returns
+/// * `Array<u8>` - Array of u8 bytes (8 bytes per word)
+fn from_WordArray_to_u8array_Le(data: Span<Word64>) -> Array<u8> {
+    let mut arr: Array<u8> = array![];
+    
+    let mut i = 0;
+    // Use precomputed powers of 2 for shift right to avoid recomputation
+    while (i != data.len()) {
+        let mut res = math_shr_precomputed((*data.at(i).data).into(), TWO_POW_0) & MAX_U8;
+        arr.append(res.try_into().unwrap());
+        res = math_shr_precomputed((*data.at(i).data).into(), TWO_POW_8) & MAX_U8;
+        arr.append(res.try_into().unwrap());
+        res = math_shr_precomputed((*data.at(i).data).into(), TWO_POW_16) & MAX_U8;
+        arr.append(res.try_into().unwrap());
+        res = math_shr_precomputed((*data.at(i).data).into(), TWO_POW_24) & MAX_U8;
+        arr.append(res.try_into().unwrap());
+        res = math_shr_precomputed((*data.at(i).data).into(), TWO_POW_32) & MAX_U8;
+        arr.append(res.try_into().unwrap());
+        res = math_shr_precomputed((*data.at(i).data).into(), TWO_POW_40) & MAX_U8;
+        arr.append(res.try_into().unwrap());
+        res = math_shr_precomputed((*data.at(i).data).into(), TWO_POW_48) & MAX_U8;
+        arr.append(res.try_into().unwrap());
+        res = math_shr_precomputed((*data.at(i).data).into(), TWO_POW_56) & MAX_U8;
+        arr.append(res.try_into().unwrap());
+        i += 1;
+    }
+    arr
 }
 
 /// Converts Word64 array back to byte array for final hash output
