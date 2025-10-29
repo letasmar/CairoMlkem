@@ -38,7 +38,104 @@ pub fn shake256_xof(mut input: Array<u8>, out_len: usize) -> Array<u8> {
     keccak_sponge_hash(input, SHAKE256_RATE_BYTES, SHAKE256_DOMAIN, out_len)
 }
 fn keccak_sponge_hash(mut input: Array<u8>, rate_bytes : usize, domain : u8, out_len: usize) -> Array<u8> {
-    ArrayTrait::new()
+    let mut state: Array<u8> = ArrayTrait::new();
+    
+    // Initialize state with zeros (200 bytes = 1600 bits)
+    let mut i: usize = 0;
+    while i < 200 {
+        state.append(0);
+        i += 1;
+    }
+    
+    let mut input_pos: usize = 0;
+    let input_len = input.len();
+    let mut block_size: usize = 0;
+    
+    // Absorb phase
+    while input_pos < input_len {
+        // Calculate block size
+        if input_len - input_pos < rate_bytes {
+            block_size = input_len - input_pos;
+        } else {
+            block_size = rate_bytes;
+        }
+        
+        // XOR input block into state
+        let mut j: usize = 0;
+        while j < block_size {
+            let state_val = *state.at(j);
+            let input_val = *input.at(input_pos + j);
+            state = set_array_at(state, j, state_val ^ input_val);
+            // state[j] = state_val ^ input_val;
+            j += 1;
+        }
+        
+        input_pos += block_size;
+        
+        // If block is complete, apply permutation
+        if block_size == rate_bytes {
+            state = keccak_f_state_permute(state);
+        }
+    }
+    
+    // Padding phase
+    let current_pos = if input_pos < input_len { input_len - input_pos } else { 0 };
+    
+    // Add domain suffix
+    let state_val = *state.at(current_pos);
+    state = set_array_at(state, current_pos, state_val ^ domain);
+    // state[current_pos] = state_val ^ domain;
+    
+    // Check if we need extra block for padding
+    if (domain & 0x80) != 0 && current_pos == (rate_bytes - 1) {
+        state = keccak_f_state_permute(state);
+    }
+    
+    // Add final padding bit
+    let last_pos = rate_bytes - 1;
+    let last_val = *state.at(last_pos);
+    state = set_array_at(state, last_pos, last_val ^ 0x80);
+    
+    // Final permutation
+    state = keccak_f_state_permute(state);
+    
+    // Squeeze phase
+    let mut output = ArrayTrait::new();
+    let mut output_remaining = out_len;
+    let mut output_pos: usize = 0;
+    
+    while output_remaining > 0 {
+        // Calculate output block size
+        if output_remaining < rate_bytes {
+            block_size = output_remaining;
+        } else {
+            block_size = rate_bytes;
+        }
+        
+        // Copy state to output
+        let mut j: usize = 0;
+        while j < block_size {
+            output.append(*state.at(output_pos + j));
+            j += 1;
+        }
+        
+        output_remaining -= block_size;
+        output_pos += block_size;
+        
+        // If more output needed, apply permutation
+        if output_remaining > 0 {
+            state = keccak_f_state_permute(state);
+            output_pos = 0;
+        }
+    }
+    
+    output
+}
+
+fn keccak_f_state_permute(state : Array<u8>) -> Array<u8>{
+    let mut tmp = from_u8Array_to_WordArray(state);
+    let mut tmp2 = keccak_f(tmp);
+    from_WordArray_to_u8array(tmp2.span())
 }
 
 fn set_array_at<T, +Copy<T>, +Drop<T>>(arr: Array<T>, index: usize, new_val: T) -> Array<T> {
@@ -54,6 +151,7 @@ fn set_array_at<T, +Copy<T>, +Drop<T>>(arr: Array<T>, index: usize, new_val: T) 
     }
     new_arr
 }
+
 fn keccak_f(mut s: Array<Word64> ) -> Array<Word64>{
     let piln = get_keccak_piln().span();
     let rotc = get_keccak_rot().span();
@@ -120,14 +218,7 @@ fn keccak_f(mut s: Array<Word64> ) -> Array<Word64>{
     }
     let res = s;
     res
-    // array![s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24]
 }
-
-
-
-
-
-
 
 
 
