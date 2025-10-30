@@ -1,16 +1,16 @@
-mod keccak;
+pub mod keccak;
 
-const SHA3_256_RATE_BYTES: usize = 136;
-const SHA3_256_DOMAIN: u8 = 0x06;
-const SHA3_256_OUTLEN: usize = 32;
-const SHA3_512_RATE_BYTES: usize = 72;
-const SHA3_512_DOMAIN: u8 = 0x06;
-const SHA3_512_OUTLEN: usize = 64;
+pub const SHA3_256_RATE_BYTES: usize = 136;
+pub const SHA3_256_DOMAIN: u8 = 0x06;
+pub const SHA3_256_OUTLEN: usize = 32;
+pub const SHA3_512_RATE_BYTES: usize = 72;
+pub const SHA3_512_DOMAIN: u8 = 0x06;
+pub const SHA3_512_OUTLEN: usize = 64;
 
-const SHAKE128_RATE_BYTES: usize = 168;
-const SHAKE128_DOMAIN: u8 = 0x1F;
-const SHAKE256_RATE_BYTES: usize = 136;
-const SHAKE256_DOMAIN: u8 = 0x1F;
+pub const SHAKE128_RATE_BYTES: usize = 168;
+pub const SHAKE128_DOMAIN: u8 = 0x1F;
+pub const SHAKE256_RATE_BYTES: usize = 136;
+pub const SHAKE256_DOMAIN: u8 = 0x1F;
 
 use keccak::keccak_sponge_hash;
 
@@ -40,4 +40,11 @@ pub fn shake128_xof(mut input: Array<u8>, out_len: usize) -> Array<u8> {
 // Like SHAKE128, the `out_len` parameter defines the desired output size.
 pub fn shake256_xof(mut input: Array<u8>, out_len: usize) -> Array<u8> {
     keccak_sponge_hash(input, SHAKE256_RATE_BYTES, SHAKE256_DOMAIN, out_len)
+}
+
+#[derive(Drop, Clone)]
+pub struct SpongeContext {
+    state: Array<u8>,
+    rate_bytes: usize,
+    domain: u8,
 }
