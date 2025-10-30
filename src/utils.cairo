@@ -1,4 +1,4 @@
-// the most of the following is pasted from sha512 Alexandria package
+// the most of the following is pasted from sha512 Alexandria package - namely constants for sha512 and Word64 struct with interfaces
 // accessed on the 29th October, 2025 https://github.com/keep-starknet-strange/alexandria/blob/ab6d8ca6be71a62c26799c2ec7f91814cde48b54/packages/math/src/sha512.cairo
 
 // Variable naming is compliant to RFC-6234 (https://datatracker.ietf.org/doc/html/rfc6234)
@@ -32,7 +32,11 @@ pub const TWO_POW_32: u64 = 0x100000000;
 pub const TWO_POW_24: u64 = 0x1000000;
 pub const TWO_POW_16: u64 = 0x10000;
 pub const TWO_POW_8: u64 = 0x100;
+pub const TWO_POW_7: u64 = 0x80;
+pub const TWO_POW_6: u64 = 0x40;
+pub const TWO_POW_5: u64 = 0x20;
 pub const TWO_POW_4: u64 = 0x10;
+pub const TWO_POW_3: u64 = 0x80;
 pub const TWO_POW_2: u64 = 0x4;
 pub const TWO_POW_1: u64 = 0x2;
 pub const TWO_POW_0: u64 = 0x1;
@@ -302,3 +306,99 @@ fn math_shr_precomputed<T, +Div<T>, +Rem<T>, +Drop<T>, +Copy<T>, +Into<T, u128>>
 ) -> T {
     x / two_power_n
 }
+
+
+// end of Alexandria package
+
+// Converts an array of MSB bits to a Array of bytes(u8)
+pub fn bits_to_bytes(bits: Array<u8>) -> Array<u8> {
+    if(bits.len() % 8 != 0){
+        panic!("alignment issues");
+    }
+    let mut bytes : Array<u8> = ArrayTrait::new();
+    let mut i = 0;
+    while(i < 8*bits.len()){
+        let byte : u8 = 
+            *bits[i + 0] * TWO_POW_0.try_into().unwrap() +
+            *bits[i + 1] * TWO_POW_1.try_into().unwrap() +
+            *bits[i + 2] * TWO_POW_2.try_into().unwrap() +
+            *bits[i + 3] * TWO_POW_3.try_into().unwrap() +
+            *bits[i + 4] * TWO_POW_4.try_into().unwrap() +
+            *bits[i + 5] * TWO_POW_5.try_into().unwrap() +
+            *bits[i + 6] * TWO_POW_6.try_into().unwrap()// +
+            // *bits[i + 7] * TWO_POW_7.try_into().unwrap()
+            ;
+        bytes.append(byte);
+        i += 8;
+    }
+    bytes
+
+}
+
+
+/// Converts an array of bytes to an array of bits (0/1).
+/// Most-significant-bit first per byte.
+pub fn bytes_to_bits(bytes: Array<u8>) -> Array<u8> {
+    let mut c = bytes.clone();
+    let mut bits : Array<u8> = ArrayTrait::new();
+    let mut i = 0;
+    while i < bytes.len() { 
+        let mut j = 0_u8;
+        let mut c_i = *c[i];
+        while j < 8 {
+            bits.append(c_i % 2);
+            c_i = c_i / 2;
+            j += 1;
+        }
+        i += 1;
+    }
+    bits
+}
+// Output: bit array 𝑏 ∈ {0, 1}8⋅ℓ.
+// 1: 𝐶 ← 𝐵 ▷ copy 𝐵 into array 𝐶 ∈ 𝔹ℓ
+// 2: for (𝑖 ← 0; 𝑖 < ℓ; 𝑖++)
+// 3: for (𝑗 ← 0; 𝑗 < 8; 𝑗++)
+// 4: 𝑏[8𝑖 + 𝑗] ← 𝐶[𝑖] mod 2
+// 5: 𝐶[𝑖] ← ⌊𝐶[𝑖]/2⌋
+// 6: end for
+// 7: end for
+// 8: return b
+
+
+pub fn pow(base: u8, exponent: u32) -> u8 {
+    let mut result: u8 = 1;
+    let mut i: u32 = 0;
+
+    while i < exponent {
+        result = result * base;
+        i += 1;
+    }
+
+    result
+}
+
+// pub fn bytes_to_bits(bytes: Array<u8>) -> Array<u8> {
+//     let mut bits = ArrayTrait::new();
+//     let mut i = 0;
+//     while i < bytes.len() {
+//         let mut b = *bytes.at(i);
+//         let mut bit = (b / TWO_POW_7.try_into().unwrap()) % 2;
+//         bits.append(bit);
+//         bit = (b / TWO_POW_6.try_into().unwrap()) % 2;
+//         bits.append(bit);
+//         bit = (b / TWO_POW_5.try_into().unwrap()) % 2;
+//         bits.append(bit);
+//         bit = (b / TWO_POW_4.try_into().unwrap()) % 2;
+//         bits.append(bit);
+//         bit = (b / TWO_POW_3.try_into().unwrap()) % 2;
+//         bits.append(bit);
+//         bit = (b / TWO_POW_2.try_into().unwrap()) % 2;
+//         bits.append(bit);
+//         bit = (b / TWO_POW_1.try_into().unwrap()) % 2;
+//         bits.append(bit);
+//         bit = b % 2;
+//         bits.append(bit);
+//         i += 1;
+//     }
+//     bits
+// }
