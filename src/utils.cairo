@@ -23,6 +23,7 @@ pub fn set_array_at<T, +Copy<T>, +Drop<T>>(arr: Array<T>, index: usize, new_val:
 
 pub const SHA512_LEN: usize = 64;
 pub const U64_BIT_NUM: u64 = 64;
+pub const MLKEM_Q: usize = 3329;
 
 // Powers of two to avoid recomputing
 pub const TWO_POW_56: u64 = 0x100000000000000;
@@ -31,6 +32,9 @@ pub const TWO_POW_40: u64 = 0x10000000000;
 pub const TWO_POW_32: u64 = 0x100000000;
 pub const TWO_POW_24: u64 = 0x1000000;
 pub const TWO_POW_16: u64 = 0x10000;
+pub const TWO_POW_11: u64 = 0x800;
+pub const TWO_POW_10: u64 = 0x400;
+pub const TWO_POW_9: u64 = 0x200;
 pub const TWO_POW_8: u64 = 0x100;
 pub const TWO_POW_7: u64 = 0x80;
 pub const TWO_POW_6: u64 = 0x40;
@@ -311,7 +315,7 @@ fn math_shr_precomputed<T, +Div<T>, +Rem<T>, +Drop<T>, +Copy<T>, +Into<T, u128>>
 // end of Alexandria package
 
 // Converts an array of MSB bits to a Array of bytes(u8)
-pub fn bits_to_bytes(bits: Array<u8>) -> Array<u8> {
+pub fn bits_to_bytes(bits: @Array<u8>) -> Array<u8> {
     if(bits.len() % 8 != 0){
         panic!("alignment issues");
     }
@@ -337,7 +341,7 @@ pub fn bits_to_bytes(bits: Array<u8>) -> Array<u8> {
 
 /// Converts an array of bytes to an array of bits (0/1).
 /// Most-significant-bit first per byte.
-pub fn bytes_to_bits(bytes: Array<u8>) -> Array<u8> {
+pub fn bytes_to_bits(bytes: @Array<u8>) -> Array<u8> {
     let mut c = bytes.clone();
     let mut bits : Array<u8> = ArrayTrait::new();
     let mut i = 0;
@@ -353,15 +357,79 @@ pub fn bytes_to_bits(bytes: Array<u8>) -> Array<u8> {
     }
     bits
 }
-// Output: bit array 𝑏 ∈ {0, 1}8⋅ℓ.
-// 1: 𝐶 ← 𝐵 ▷ copy 𝐵 into array 𝐶 ∈ 𝔹ℓ
-// 2: for (𝑖 ← 0; 𝑖 < ℓ; 𝑖++)
-// 3: for (𝑗 ← 0; 𝑗 < 8; 𝑗++)
-// 4: 𝑏[8𝑖 + 𝑗] ← 𝐶[𝑖] mod 2
-// 5: 𝐶[𝑖] ← ⌊𝐶[𝑖]/2⌋
-// 6: end for
-// 7: end for
-// 8: return b
+
+// encodes an array of d-bit integers into a byte array, 1 <= d <= 12
+pub fn byte_encode(F: Span<usize>, d : usize) -> Array<u8>{
+    if(F.len() != 256 || d < 1 || d > 12){
+        panic!("Wrong parameters for byte_encode");
+    }
+
+    // set modulus
+    let m : usize = set_modulus(d);
+    let mut i = 0;
+    let mut b : Array<u8> = ArrayTrait::new();
+    while i < 256_usize{
+        i += 1;
+        let mut a : usize = *F[i] % m;
+        let mut j = 0;
+        while j < d{
+            let tmp = a%2;
+            b.append(tmp.try_into().unwrap());
+            a = (a - tmp)/2;
+            j += 1;
+        }
+    }
+    bits_to_bytes(@b)
+}
+
+// decodes a byte array into an array of d-bit integers, 1 <= d <= 12
+pub fn byte_decode(B : @Array<u8>, d : usize) -> Array<usize> {
+    if(B.len() % 32 != 0 || d < 1 || d > 12){
+        panic!("Wrong parameters for byte_encode");
+    }
+    let m : usize = set_modulus(d);
+    let b = bytes_to_bits(B);
+
+    let powers_2 = @get_powers_2();
+    let mut F : Array<usize> = ArrayTrait::new();
+    let mut i = 0;
+    while i < 256_usize{
+        let mut sum: usize = 0;
+        let mut j = 0;
+        while j < d {
+            let idx = i * d + j;
+            let b_val: usize = (*b.at(idx)).into(); // get bit as usize (0 or 1)
+            let p = *powers_2.at(j);
+            sum += b_val * p.try_into().unwrap();
+            j += 1;
+        }
+        // f[i] = sum_0_d-1(b[i*d + j]*2**j) mod m
+        F.append(sum % m);
+        i += 1;
+    }
+    F
+}
+
+fn set_modulus( d: usize) -> usize{
+    let mut m : usize = 0;
+    match d{
+        0 => {panic!("modulus cannot be set");},
+        1 => {m = TWO_POW_1.try_into().unwrap();},
+        2 => {m = TWO_POW_2.try_into().unwrap();},
+        3 => {m = TWO_POW_3.try_into().unwrap();},
+        4 => {m = TWO_POW_4.try_into().unwrap();},
+        5 => {m = TWO_POW_5.try_into().unwrap();},
+        6 => {m = TWO_POW_6.try_into().unwrap();},
+        7 => {m = TWO_POW_7.try_into().unwrap();},
+        8 => {m = TWO_POW_8.try_into().unwrap();},
+        9 => {m = TWO_POW_9.try_into().unwrap();},
+        10 => {m = TWO_POW_10.try_into().unwrap();},
+        11 => {m = TWO_POW_11.try_into().unwrap();},
+        12 => {m = MLKEM_Q;},
+        _ => {panic!("modulus cannot be set");}
+    }
+    m
+}
 
 
 pub fn pow(base: u8, exponent: u32) -> u8 {
@@ -376,28 +444,28 @@ pub fn pow(base: u8, exponent: u32) -> u8 {
     result
 }
 
-// pub fn bytes_to_bits(bytes: Array<u8>) -> Array<u8> {
-//     let mut bits = ArrayTrait::new();
-//     let mut i = 0;
-//     while i < bytes.len() {
-//         let mut b = *bytes.at(i);
-//         let mut bit = (b / TWO_POW_7.try_into().unwrap()) % 2;
-//         bits.append(bit);
-//         bit = (b / TWO_POW_6.try_into().unwrap()) % 2;
-//         bits.append(bit);
-//         bit = (b / TWO_POW_5.try_into().unwrap()) % 2;
-//         bits.append(bit);
-//         bit = (b / TWO_POW_4.try_into().unwrap()) % 2;
-//         bits.append(bit);
-//         bit = (b / TWO_POW_3.try_into().unwrap()) % 2;
-//         bits.append(bit);
-//         bit = (b / TWO_POW_2.try_into().unwrap()) % 2;
-//         bits.append(bit);
-//         bit = (b / TWO_POW_1.try_into().unwrap()) % 2;
-//         bits.append(bit);
-//         bit = b % 2;
-//         bits.append(bit);
-//         i += 1;
-//     }
-//     bits
-// }
+
+// for use in loops, expensive
+// Powers of two to avoid recomputing, save in function
+pub fn get_powers_2() -> Array<u64> {
+    let mut power_2: Array<u64> = ArrayTrait::new();
+    power_2.append( TWO_POW_0 );
+    power_2.append( TWO_POW_1 );
+    power_2.append( TWO_POW_2 );
+    power_2.append( TWO_POW_3 );
+    power_2.append( TWO_POW_4 );
+    power_2.append( TWO_POW_5 );
+    power_2.append( TWO_POW_6 );
+    power_2.append( TWO_POW_7 );
+    power_2.append( TWO_POW_8 );
+    power_2.append( TWO_POW_9 );
+    power_2.append( TWO_POW_10 );
+    power_2.append( TWO_POW_11 );
+    power_2.append( TWO_POW_16 );
+    power_2.append( TWO_POW_24 );
+    power_2.append( TWO_POW_32 );
+    power_2.append( TWO_POW_40 );
+    power_2.append( TWO_POW_48 );
+    power_2.append( TWO_POW_56 );
+    power_2
+}
