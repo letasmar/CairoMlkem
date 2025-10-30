@@ -36,7 +36,7 @@ pub const TWO_POW_7: u64 = 0x80;
 pub const TWO_POW_6: u64 = 0x40;
 pub const TWO_POW_5: u64 = 0x20;
 pub const TWO_POW_4: u64 = 0x10;
-pub const TWO_POW_3: u64 = 0x80;
+pub const TWO_POW_3: u64 = 0x8;
 pub const TWO_POW_2: u64 = 0x4;
 pub const TWO_POW_1: u64 = 0x2;
 pub const TWO_POW_0: u64 = 0x1;
@@ -317,17 +317,16 @@ pub fn bits_to_bytes(bits: Array<u8>) -> Array<u8> {
     }
     let mut bytes : Array<u8> = ArrayTrait::new();
     let mut i = 0;
-    while(i < 8*bits.len()){
+    while(i < bits.len()){
         let byte : u8 = 
-            *bits[i + 0] * TWO_POW_0.try_into().unwrap() +
-            *bits[i + 1] * TWO_POW_1.try_into().unwrap() +
-            *bits[i + 2] * TWO_POW_2.try_into().unwrap() +
-            *bits[i + 3] * TWO_POW_3.try_into().unwrap() +
-            *bits[i + 4] * TWO_POW_4.try_into().unwrap() +
-            *bits[i + 5] * TWO_POW_5.try_into().unwrap() +
-            *bits[i + 6] * TWO_POW_6.try_into().unwrap()// +
-            // *bits[i + 7] * TWO_POW_7.try_into().unwrap()
-            ;
+        *bits[i + 0] * TWO_POW_0.try_into().unwrap()+
+        *bits[i + 1] * TWO_POW_1.try_into().unwrap()+
+        *bits[i + 2] * TWO_POW_2.try_into().unwrap()+
+        *bits[i + 3] * TWO_POW_3.try_into().unwrap()+
+        *bits[i + 4] * TWO_POW_4.try_into().unwrap()+
+        *bits[i + 5] * TWO_POW_5.try_into().unwrap() +
+        *bits[i + 6] * TWO_POW_6.try_into().unwrap() +
+        *bits[i + 7] * TWO_POW_7.try_into().unwrap();
         bytes.append(byte);
         i += 8;
     }
