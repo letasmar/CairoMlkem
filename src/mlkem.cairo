@@ -1,4 +1,5 @@
 pub mod mlkem_internal;
+pub mod kpke;
 
 // parameters for MLKEM
 pub const MLKEM_Q: usize = 3329;
@@ -49,6 +50,24 @@ pub struct keyCipher{
     pub c : Array<u8>,
     pub k_len : u16,
     pub c_len : u16
+}
+
+fn keys_init() -> keys{
+    keys{
+        ek : ArrayTrait::new(),
+        dk : ArrayTrait::new(),
+        ek_len : 0_u16,
+        dk_len : 0_u16
+    }
+}
+
+fn keyCipher_init() -> keyCipher{
+    keyCipher{
+        key : ArrayTrait::new(),
+        c : ArrayTrait::new(),
+        k_len : 0_u16,
+        c_len : 0_u16
+    }
 }
 
 pub fn mlkem_key_gen_512() -> keys{
