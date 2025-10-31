@@ -24,6 +24,10 @@ pub fn set_array_at<T, +Copy<T>, +Drop<T>>(arr: Array<T>, index: usize, new_val:
 pub const SHA512_LEN: usize = 64;
 pub const U64_BIT_NUM: u64 = 64;
 pub const MLKEM_Q: usize = 3329;
+pub const MLKEM_Qu16: u16 = 3329;
+pub const MLKEM_N: usize = 3329;
+pub const MLKEM256_ETA1 : usize = 3; // generating s,e in KeyGen, y in Encrypt
+pub const MLKEM_ETA : usize = 2;
 
 // Powers of two to avoid recomputing
 pub const TWO_POW_56: u64 = 0x100000000000000;
@@ -358,18 +362,18 @@ pub fn bytes_to_bits(bytes: @Array<u8>) -> Array<u8> {
     bits
 }
 
-// encodes an array of d-bit integers into a byte array, 1 <= d <= 12
-pub fn byte_encode(F: Span<usize>, d : usize) -> Array<u8>{
+/// encodes an array of d-bit integers into a byte array, 1 <= d <= 12
+pub fn byte_encode(F: @Array<usize>, d : usize) -> Array<u8>{
     if(F.len() != 256 || d < 1 || d > 12){
         panic!("Wrong parameters for byte_encode");
     }
-
+    // println!("Running byte_encode!");
     // set modulus
     let m : usize = set_modulus(d);
     let mut i = 0;
     let mut b : Array<u8> = ArrayTrait::new();
     while i < 256_usize{
-        i += 1;
+        // println!("panic with {}", i);
         let mut a : usize = *F[i] % m;
         let mut j = 0;
         while j < d{
@@ -378,11 +382,12 @@ pub fn byte_encode(F: Span<usize>, d : usize) -> Array<u8>{
             a = (a - tmp)/2;
             j += 1;
         }
+        i += 1;
     }
     bits_to_bytes(@b)
 }
 
-// decodes a byte array into an array of d-bit integers, 1 <= d <= 12
+/// decodes a byte array into an array of d-bit integers, 1 <= d <= 12
 pub fn byte_decode(B : @Array<u8>, d : usize) -> Array<usize> {
     if(B.len() % 32 != 0 || d < 1 || d > 12){
         panic!("Wrong parameters for byte_encode");
@@ -410,6 +415,43 @@ pub fn byte_decode(B : @Array<u8>, d : usize) -> Array<usize> {
     F
 }
 
+/// converts from Z_q to Z_(2^q)
+pub fn compress(input: @Array<u16>, d : usize) -> Array<u16>{
+    if( d >= 12 ){
+        panic!("Wrong d value");
+    }
+    let powers_2 = @get_powers_2();
+    let scale : u16 = (*powers_2[d]).try_into().unwrap();
+    let mut output : Array<u16> = ArrayTrait::new();
+
+    let mut i = 0;
+    while( i < input.len()){
+        let tmp = ((*input[i] * scale + MLKEM_Qu16/2) / MLKEM_Qu16) % scale;
+        output.append(tmp);
+        i += 1;
+    }
+    output
+}
+
+/// converts from Z_(2^q) to Z_(2^q)
+pub fn decompress(input: @Array<u16>, d : usize) -> Array<u16>{
+    if( d >= 12 ){
+        panic!("Wrong d value");
+    }
+    let powers_2 = @get_powers_2();
+    let scale : u16 = (*powers_2[d]).try_into().unwrap();
+    let rounding : u16 = (*powers_2[d-1]).try_into().unwrap();
+    let mut output : Array<u16> = ArrayTrait::new();
+
+    let mut i = 0;
+    while( i < input.len()){
+        let tmp = (*input[i] * MLKEM_Qu16 + rounding) / scale;
+        output.append(tmp);
+        i += 1;
+    }
+    output
+}
+
 fn set_modulus( d: usize) -> usize{
     let mut m : usize = 0;
     match d{
@@ -430,7 +472,6 @@ fn set_modulus( d: usize) -> usize{
     }
     m
 }
-
 
 pub fn pow(base: u8, exponent: u32) -> u8 {
     let mut result: u8 = 1;
