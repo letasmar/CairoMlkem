@@ -7,7 +7,7 @@ use crate::hashes::SpongeContext;
 pub fn keccak_sponge_hash(mut input: Array<u8>, rate_bytes : usize, domain : u8, out_len: usize) -> Array<u8> {
     let mut ctx = keccak_sponge_init_context(rate_bytes, domain);
     // Absorb phase
-    ctx = kecak_sponge_absorb( ctx, input);
+    ctx = kecak_sponge_absorb( ctx, @input);
     // Squeeze phase
     let (ctx, output) = keccak_sponge_squeeze(ctx, out_len);
     output
@@ -66,7 +66,7 @@ pub fn keccak_sponge_init_context(rate_bytes: usize, domain: u8) -> SpongeContex
     }
 }
 
-pub fn kecak_sponge_absorb(mut ctx: SpongeContext, mut input: Array<u8>) -> SpongeContext{
+pub fn kecak_sponge_absorb(mut ctx: SpongeContext, mut input: @Array<u8>) -> SpongeContext{
     let rate_bytes = ctx.rate_bytes;
     let mut state = ctx.state;
     let domain = ctx.domain;
