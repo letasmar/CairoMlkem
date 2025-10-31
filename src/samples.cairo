@@ -3,7 +3,7 @@ use crate::hashes::keccak::keccak_sponge_init_context;
 use crate::hashes::keccak::keccak_sponge_squeeze;
 use crate::hashes::keccak::kecak_sponge_absorb;
 use crate::utils::bytes_to_bits;
-use crate::utils::{MLKEM_Q, MLKEM_Qu16};
+use crate::mlkem::{MLKEM_Q, MLKEM_Qu16};
 
 
 /// Takes a 32-byte seed and two indices as input and outputs a pseudorandom element of 𝑇𝑞.

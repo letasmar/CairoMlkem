@@ -4,8 +4,10 @@
 // Variable naming is compliant to RFC-6234 (https://datatracker.ietf.org/doc/html/rfc6234)
 
 use crate::opt_math::{OptBitShift, OptWrapping};
+use crate::mlkem::{MLKEM_Q, MLKEM_Qu16};
 use core::num::traits::{Bounded, WrappingAdd};
 use core::traits::{BitAnd, BitOr, BitXor, BitNot};
+
 
 pub fn set_array_at<T, +Copy<T>, +Drop<T>>(arr: Array<T>, index: usize, new_val: T) -> Array<T> {
     let mut new_arr = ArrayTrait::new();
@@ -21,13 +23,6 @@ pub fn set_array_at<T, +Copy<T>, +Drop<T>>(arr: Array<T>, index: usize, new_val:
     new_arr
 }
 
-pub const SHA512_LEN: usize = 64;
-pub const U64_BIT_NUM: u64 = 64;
-pub const MLKEM_Q: usize = 3329;
-pub const MLKEM_Qu16: u16 = 3329;
-pub const MLKEM_N: usize = 3329;
-pub const MLKEM256_ETA1 : usize = 3; // generating s,e in KeyGen, y in Encrypt
-pub const MLKEM_ETA : usize = 2;
 
 // Powers of two to avoid recomputing
 pub const TWO_POW_56: u64 = 0x100000000000000;
@@ -49,6 +44,7 @@ pub const TWO_POW_2: u64 = 0x4;
 pub const TWO_POW_1: u64 = 0x2;
 pub const TWO_POW_0: u64 = 0x1;
 
+pub const U64_BIT_NUM: u64 = 64;
 // Max u8 and u64 for bitwise operations
 pub const MAX_U8: u64 = 0xff;
 pub const MAX_U64: u128 = 0xffffffffffffffff;
@@ -363,18 +359,18 @@ pub fn bytes_to_bits(bytes: @Array<u8>) -> Array<u8> {
 }
 
 /// encodes an array of d-bit integers into a byte array, 1 <= d <= 12
-pub fn byte_encode(F: @Array<usize>, d : usize) -> Array<u8>{
+pub fn byte_encode(F: @Array<u16>, d : usize) -> Array<u8>{
     if(F.len() != 256 || d < 1 || d > 12){
         panic!("Wrong parameters for byte_encode");
     }
     // println!("Running byte_encode!");
     // set modulus
-    let m : usize = set_modulus(d);
+    let m : u16 = set_modulus(d);
     let mut i = 0;
     let mut b : Array<u8> = ArrayTrait::new();
     while i < 256_usize{
         // println!("panic with {}", i);
-        let mut a : usize = *F[i] % m;
+        let mut a : u16 = *F[i] % m;
         let mut j = 0;
         while j < d{
             let tmp = a%2;
@@ -388,15 +384,15 @@ pub fn byte_encode(F: @Array<usize>, d : usize) -> Array<u8>{
 }
 
 /// decodes a byte array into an array of d-bit integers, 1 <= d <= 12
-pub fn byte_decode(B : @Array<u8>, d : usize) -> Array<usize> {
+pub fn byte_decode(B : @Array<u8>, d : usize) -> Array<u16> {
     if(B.len() % 32 != 0 || d < 1 || d > 12){
         panic!("Wrong parameters for byte_encode");
     }
-    let m : usize = set_modulus(d);
+    let m : u16 = set_modulus(d);
     let b = bytes_to_bits(B);
 
     let powers_2 = @get_powers_2();
-    let mut F : Array<usize> = ArrayTrait::new();
+    let mut F : Array<u16> = ArrayTrait::new();
     let mut i = 0;
     while i < 256_usize{
         let mut sum: usize = 0;
@@ -409,7 +405,7 @@ pub fn byte_decode(B : @Array<u8>, d : usize) -> Array<usize> {
             j += 1;
         }
         // f[i] = sum_0_d-1(b[i*d + j]*2**j) mod m
-        F.append(sum % m);
+        F.append(sum.try_into().unwrap() % m);
         i += 1;
     }
     F
@@ -452,8 +448,48 @@ pub fn decompress(input: @Array<u16>, d : usize) -> Array<u16>{
     output
 }
 
-fn set_modulus( d: usize) -> usize{
-    let mut m : usize = 0;
+pub fn concat_arrays<T, +Copy<T>, +Drop<T>>(a: @Array<T>, b: @Array<T>) -> Array<T> {
+    let mut result: Array<T> = ArrayTrait::new();
+    let mut i = 0;
+    while i < a.len() {
+        result.append(*a.at(i));
+        i += 1;
+    }
+    i = 0;
+    while i < b.len() {
+        result.append(*b.at(i));
+        i += 1;
+    }
+    result
+}
+
+pub fn array_from_span<T, +Copy<T>, +Drop<T>>(span: Span<T>) -> Array<T> {
+    let mut result: Array<T> = ArrayTrait::new();
+    let mut i = 0;
+    while i < span.len() {
+        result.append(*span.at(i));
+        i += 1;
+    }
+    result
+}
+
+pub fn append_n_zeroes<T, +Copy<T>, +Drop<T>>(arr: @Array<T>, n: usize, zero: T) -> Array<T> {
+    let mut result: Array<T> = ArrayTrait::new();
+    let mut i = 0;
+    while i < arr.len() {
+        result.append(*arr.at(i));
+        i += 1;
+    }
+    i = 0;
+    while i < n {
+        result.append(zero);
+        i += 1;
+    }
+    result
+}
+
+fn set_modulus( d: usize) -> u16{
+    let mut m : u16 = 0;
     match d{
         0 => {panic!("modulus cannot be set");},
         1 => {m = TWO_POW_1.try_into().unwrap();},
@@ -467,7 +503,7 @@ fn set_modulus( d: usize) -> usize{
         9 => {m = TWO_POW_9.try_into().unwrap();},
         10 => {m = TWO_POW_10.try_into().unwrap();},
         11 => {m = TWO_POW_11.try_into().unwrap();},
-        12 => {m = MLKEM_Q;},
+        12 => {m = MLKEM_Qu16;},
         _ => {panic!("modulus cannot be set");}
     }
     m
