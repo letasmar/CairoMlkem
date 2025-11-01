@@ -14,7 +14,6 @@ pub fn sample_ntt(bytes: @Array<u8>) -> Array<u16> {
     ctx = kecak_sponge_absorb(ctx.clone(), bytes);
     
     let mut j = 0;
-    let mut c : Array<u8> = ArrayTrait::new();
     let mut aHat : Array<u16> = ArrayTrait::new();
 
     // print!("initialized variables. Onto the loop\n");

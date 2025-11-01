@@ -52,7 +52,7 @@ pub struct keyCipher{
     pub c_len : u16
 }
 
-fn keys_init() -> keys{
+pub fn keys_init() -> keys{
     keys{
         ek : ArrayTrait::new(),
         dk : ArrayTrait::new(),
@@ -61,7 +61,7 @@ fn keys_init() -> keys{
     }
 }
 
-fn keyCipher_init() -> keyCipher{
+pub fn keyCipher_init() -> keyCipher{
     keyCipher{
         key : ArrayTrait::new(),
         c : ArrayTrait::new(),

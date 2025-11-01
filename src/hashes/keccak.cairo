@@ -9,7 +9,7 @@ pub fn keccak_sponge_hash(mut input: Array<u8>, rate_bytes : usize, domain : u8,
     // Absorb phase
     ctx = kecak_sponge_absorb( ctx, @input);
     // Squeeze phase
-    let (ctx, output) = keccak_sponge_squeeze(ctx, out_len);
+    let (_ctx, output) = keccak_sponge_squeeze(ctx, out_len);
     output
 }
 
