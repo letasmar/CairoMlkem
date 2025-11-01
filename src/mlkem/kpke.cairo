@@ -13,11 +13,16 @@ use crate::utils::byte_encode;
 
 /// d is random seed of 32 bytes, others are mlkem parameters
 pub fn kpke_keygen( d : @Array<u8>, k : usize, eta : usize, du : usize, dv: usize) -> keys{
+    print!("Running kpke_keygen\n");
+    if(d.len() != 32_usize){
+        panic!("Seed must be 32 bytes long");
+    }
+    
     // here perhaps d should be concatenated with k
     // G is SHA3-512
     let (rho, sigma ) = G(d.clone());
 
-
+    print!("Rho length: {}, Sigma length: {}\n", rho.len(), sigma.len());
     let mut big_n : u8 = 0;
     // generate matrix Ahat
     let mut Ahat : Array<Array<u16>> = ArrayTrait::new();
@@ -34,6 +39,10 @@ pub fn kpke_keygen( d : @Array<u8>, k : usize, eta : usize, du : usize, dv: usiz
         i += 1;
     }
 
+    // print Ahat size
+    println!("Ahat has {} rows", Ahat.len());
+    println!("Each row has {} columns", Ahat.at(0).len());
+
     // generate s vector 
     let mut s : Array<Array<u16>> = ArrayTrait::new();
     i = 0;
@@ -46,6 +55,10 @@ pub fn kpke_keygen( d : @Array<u8>, k : usize, eta : usize, du : usize, dv: usiz
         big_n += 1;
     }
 
+    //print s size
+    println!("s has {} polynomials", s.len());
+    println!("Each polynomial has {} coefficients", s.at(0).len());
+
     // generate e vector
     let mut e : Array<Array<u16>> = ArrayTrait::new();
     i = 0;
@@ -57,6 +70,9 @@ pub fn kpke_keygen( d : @Array<u8>, k : usize, eta : usize, du : usize, dv: usiz
         i += 1;
         big_n += 1;
     }
+    // print e size
+    println!("e has {} polynomials", e.len());
+    println!("Each polynomial has {} coefficients", e.at(0).len());
 
     // run ntt on s and e each coordinate
     let mut s_ntt : Array<Array<u16>> = ArrayTrait::new();
@@ -116,6 +132,9 @@ pub fn kpke_keygen( d : @Array<u8>, k : usize, eta : usize, du : usize, dv: usiz
         tHat.append(acc);
         i += 1;
     }
+    // print tHat size
+    println!("tHat has {} polynomials", tHat.len());
+    println!("Each polynomial has {} coefficients", tHat.at(0).len());
 
 
     //use  byte_encode to serialize ek and dk
@@ -123,7 +142,7 @@ pub fn kpke_keygen( d : @Array<u8>, k : usize, eta : usize, du : usize, dv: usiz
     // ek is tHat and rho combined
     i = 0;
     while i < k.try_into().unwrap(){
-        let encoded_poly = byte_encode(@(*tHat.at(i)), 12);
+        let encoded_poly = byte_encode(tHat.at(i.into()), 12);
         for byte in encoded_poly{
             key_pair.ek.append(byte);
         }
@@ -132,18 +151,19 @@ pub fn kpke_keygen( d : @Array<u8>, k : usize, eta : usize, du : usize, dv: usiz
     for byte in rho{
         key_pair.ek.append(byte);
     }
-    key_pair.ek_len = key_pair.ek.len().try_into().unwrap();
     // dk is s_ntt
     i = 0;
     while i < k.try_into().unwrap(){
-        let encoded_poly = byte_encode(@(*s_ntt[i]), 12);
+        let encoded_poly = byte_encode(s_ntt.at(i.into()), 12);
         for byte in encoded_poly{
             key_pair.dk.append(byte);
         }
         i += 1;
     }
-
+    
+    key_pair.ek_len = key_pair.ek.len().try_into().unwrap();
     key_pair.dk_len = key_pair.dk.len().try_into().unwrap();
+    print!("Kpke KeyGen End eklength: {} dk length: {}\n", key_pair.ek_len, key_pair.dk_len);
     key_pair
 }
 

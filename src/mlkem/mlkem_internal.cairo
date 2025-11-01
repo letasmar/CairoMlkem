@@ -8,23 +8,17 @@ use crate::hashes::H;
 use crate::mlkem::kpke;
 
 pub fn mlkem_key_gen_512_impl() -> keys{
+    print!("Running mlkem_key_gen_512_impl\n");
     // internal needs two random 32byte seeds
-    mlkem_key_gen_512_internal(@get_seed512(), @get_z512())
-}
-
-
-// pub fn mlkem_key_gen_768_impl() -> keys{
-//     mlkem_internal::mlkem_key_gen_768_internal()
-// }
-// pub fn mlkem_key_gen_1024_impl() -> keys{
-//     mlkem_internal::mlkem_key_gen_1024_internal()
-// }
-
-pub fn mlkem_key_gen_512_internal( d : @Array<u8>, z : @Array<u8> ) -> keys{
+    // let k = mlkem_key_gen_512_internal(@get_seed512(), @get_z512());
+    let d = @get_seed512();
+    let z = @get_z512();
     if(d.len() != 32_usize || z.len() != 32_usize){
         panic!("Seeds must be 32 bytes long");
     }
-    let mut k : keys = keys_init();
+
+    // print!("Running mlkem_key_gen_512_internal\n");
+    let mut kpkeKeys : keys = keys_init();
     let kpkeKeys = kpke::kpke_keygen(d, MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
     let ekpke = kpkeKeys.ek;
     let dkpke = kpkeKeys.dk;
@@ -34,12 +28,63 @@ pub fn mlkem_key_gen_512_internal( d : @Array<u8>, z : @Array<u8> ) -> keys{
     let dkpke_ekpke = concat_arrays(@dkpke, @ekpke);
     let tmp2 = concat_arrays(@dkpke_ekpke, @hek);
 
+    let mut k : keys = keys_init();
     k.ek = ekpke;
     k.dk = concat_arrays(@tmp2, z);
     k.ek_len = MLKEM512_ENCAPS_K.try_into().unwrap();
     k.dk_len = MLKEM512_DECAPS_K.try_into().unwrap();
+    // print!("Encapsulation key should be length: {}\n", MLKEM512_ENCAPS_K);
+    // print!("Decapsulation key should be length: {}\n", MLKEM512_DECAPS_K);
+    // print!("K has public key length: {} and secret key length: {}\n", k.ek.len(), k.dk.len());
+    // print!("Struct says ek {} and dk {} bytes\n", k.ek_len, k.dk_len);
+    // k
+    print!("K has public key length: {} and secret key length: {}\n", k.ek.len(), k.dk.len());
     k
 }
+
+// pub fn mlkem_key_gen_512_impl() -> keys{
+//     print!("Running mlkem_key_gen_512_impl\n");
+//     // internal needs two random 32byte seeds
+//     let k = mlkem_key_gen_512_internal(@get_seed512(), @get_z512());
+//     print!("K has public key length: {} and secret key length: {}\n", k.ek.len(), k.dk.len());
+//     k
+// }
+
+
+// pub fn mlkem_key_gen_768_impl() -> keys{
+//     mlkem_internal::mlkem_key_gen_768_internal()
+// }
+// pub fn mlkem_key_gen_1024_impl() -> keys{
+//     mlkem_internal::mlkem_key_gen_1024_internal()
+// }
+
+// pub fn mlkem_key_gen_512_internal( d : @Array<u8>, z : @Array<u8> ) -> keys{
+//     if(d.len() != 32_usize || z.len() != 32_usize){
+//         panic!("Seeds must be 32 bytes long");
+//     }
+
+//     // print!("Running mlkem_key_gen_512_internal\n");
+//     let mut kpkeKeys : keys = keys_init();
+//     let kpkeKeys = kpke::kpke_keygen(d, MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
+//     let ekpke = kpkeKeys.ek;
+//     let dkpke = kpkeKeys.dk;
+    
+//     // hex is sha3-256(ekpke), H function
+//     let hek = H(ekpke.clone());
+//     let dkpke_ekpke = concat_arrays(@dkpke, @ekpke);
+//     let tmp2 = concat_arrays(@dkpke_ekpke, @hek);
+
+//     let mut k : keys = keys_init();
+//     k.ek = ekpke;
+//     k.dk = concat_arrays(@tmp2, z);
+//     k.ek_len = MLKEM512_ENCAPS_K.try_into().unwrap();
+//     k.dk_len = MLKEM512_DECAPS_K.try_into().unwrap();
+//     // print!("Encapsulation key should be length: {}\n", MLKEM512_ENCAPS_K);
+//     // print!("Decapsulation key should be length: {}\n", MLKEM512_DECAPS_K);
+//     // print!("K has public key length: {} and secret key length: {}\n", k.ek.len(), k.dk.len());
+//     // print!("Struct says ek {} and dk {} bytes\n", k.ek_len, k.dk_len);
+//     k
+// }
 
 
 
