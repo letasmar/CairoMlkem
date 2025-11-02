@@ -4,7 +4,7 @@
 // Variable naming is compliant to RFC-6234 (https://datatracker.ietf.org/doc/html/rfc6234)
 
 use crate::opt_math::{OptBitShift, OptWrapping};
-use crate::mlkem::{MLKEM_Qu16};
+use crate::mlkem::{MLKEM_Qu16, MLKEM_Q};
 use core::num::traits::{Bounded, WrappingAdd};
 use core::traits::{BitAnd, BitOr, BitXor, BitNot};
 
@@ -417,15 +417,18 @@ pub fn compress(input: @Array<u16>, d : usize) -> Array<u16>{
         panic!("Wrong d value");
     }
     let powers_2 = @get_powers_2();
-    let scale : u16 = (*powers_2[d]).try_into().unwrap();
+    let scale : u32 = (*powers_2[d]).try_into().unwrap();
     let mut output : Array<u16> = ArrayTrait::new();
 
     let mut i = 0;
+    print!("Looking for overflows in compress...\n");
     while( i < input.len()){
-        let tmp = ((*input[i] * scale + MLKEM_Qu16/2) / MLKEM_Qu16) % scale;
-        output.append(tmp);
+        let tmp_overflow : u32 = ((*input[i]).into() * scale + MLKEM_Q/2);
+        let tmp = (tmp_overflow / MLKEM_Q) % scale.into();
+        output.append(tmp.try_into().unwrap());
         i += 1;
     }
+    print!("No overflows found in compress!\n");
     output
 }
 
@@ -435,14 +438,15 @@ pub fn decompress(input: @Array<u16>, d : usize) -> Array<u16>{
         panic!("Wrong d value");
     }
     let powers_2 = @get_powers_2();
-    let scale : u16 = (*powers_2[d]).try_into().unwrap();
-    let rounding : u16 = (*powers_2[d-1]).try_into().unwrap();
+    let scale : u32 = (*powers_2[d]).try_into().unwrap();
+    let rounding : u32 = (*powers_2[d-1]).try_into().unwrap();
     let mut output : Array<u16> = ArrayTrait::new();
 
     let mut i = 0;
     while( i < input.len()){
-        let tmp = (*input[i] * MLKEM_Qu16 + rounding) / scale;
-        output.append(tmp);
+        let tmp_overflow : u32 = ((*input[i]).into() * MLKEM_Q + rounding);
+        let tmp = tmp_overflow / scale;
+        output.append(tmp.try_into().unwrap());
         i += 1;
     }
     output
