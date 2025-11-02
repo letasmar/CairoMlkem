@@ -1,6 +1,5 @@
 use crate::mlkem::keys;
 use crate::mlkem::keys_init;
-use crate::mlkem::keyCipher;
 use crate::hashes::{G, prfEta};
 use crate::samples::{sample_ntt, sample_poly_cbd};
 use crate::ntt::ntt;
@@ -11,6 +10,9 @@ use crate::utils::set_array_at;
 use crate::utils::append_n_zeroes;
 use crate::utils::byte_encode;
 use crate::utils::byte_decode;
+use crate::utils::decompress;
+use crate::utils::compress;
+use crate::utils::concat_arrays;
 
 /// d is random seed of 32 bytes, others are mlkem parameters
 /// keys struct contains ek and dk as u8 arrays
@@ -143,38 +145,171 @@ pub fn kpke_keygen( d : @Array<u8>, k : usize, eta : usize, du : usize, dv: usiz
 /// r : randomness derived from G
 /// k, eta, du, dv : mlkem parameters
 /// Returns ciphertext as u8 array
-pub fn kpke_encrypt(ek : Array<u8>, m : @Array<u8>, r : @Array<u8>, k : usize, eta : usize, du : usize, dv: usize) -> Array<u8>{
+pub fn kpke_encrypt(ek : @Array<u8>, m : @Array<u8>, r : @Array<u8>, k : usize, eta : usize, du : usize, dv: usize) -> Array<u8>{
     let mut big_n : u8 = 0;
-
+    print!("Running kpke_encrypt\n");
     // run bytedecode_12 k times to decode tHat and obtain rho from last 32 bytes of ek
     let mut i :u8 = 0;
     let mut tHat : Array<Array<u16>> = ArrayTrait::new();
+    let ek_span = ek.span();
 
+    // print out accessed indexes for debugging
+    println!("ek length: {}", ek_span.len());
+    println!("last byte index: {}", *ek_span.at(799));
+    println!("k value: {}", k);
     while i < k.try_into().unwrap(){
+        print!("1This should display {} times\n", k);
         let start_idx : usize = i.into() * 384;
         let end_idx : usize = start_idx + 384;
-        let encoded_poly = ek.span().slice(start_idx, end_idx);
-        let tHat_poly = byte_decode(encoded_poly, 12);
+        print!("Accessing ek from index {} to {}\n", start_idx, end_idx);
+        let encoded_poly = ek_span.slice(start_idx, 384);
+        print!("2This should display {} times\n", k);
+        // change everything to use spans
+        tHat.append(byte_decode(@array_from_span(encoded_poly), 12));
         // let enconded_poly = ek.clone().slice(start_idx, end_idx);
         // let tHat_poly = byte_decode(enconded_poly, 12);
         // print!("tHat polynomial {} decoded\n", i);
         i += 1;
     }
 
+    // obtain rho
+    let rho_start_idx : usize = k * 384;
+    let rho = ek_span.slice(rho_start_idx, 32);
+    print!("Rho obtained\n");
+
+
+
     // re-generate Ahat
+    let Ahat : Array<Array<u16>> = generate_matrix(k, @array_from_span(rho));
+    println!("Ahat regenerated with dimensions: {} x {}\n", Ahat.len(), Ahat.at(0).len());
     //generate y
+    let (mut y, mut big_n1) = generate_vector( k, r, eta, big_n);
+    big_n = big_n1;
+    
     //generate e1
-    // sample e2
+    let (mut e1, mut big_n2) = generate_vector( k, r, eta, big_n);
+    big_n = big_n2;
 
-    // compute yhat
+    // sample e2, as a single vector
+    let e2 : Array<u16> = sample_poly_cbd(@prfEta(eta, r.clone(), big_n), eta);
+    
+
+
+    // compute yhat - ntt of y
+    i = 0;
+    let mut y_ntt : Array<Array<u16>> = ArrayTrait::new();
+    for poly in y{
+        y_ntt.append(array_from_span(ntt(poly.span())));
+    }
+
+    print!("y_ntt computed\n");
     // copmute u through ntt inverse
-    // compute mu through decompres
-    // compute v
-    // compute c1, c2
-    // return concat_arrays(c1, c2)
+    let mut uHat : Array<Array<u16>> = ArrayTrait::new();
+    i = 0;
+    while i < k.try_into().unwrap(){
+        // acc = uHat[i]
+        let mut acc: Array<u16> = ArrayTrait::new();
+        acc = append_n_zeroes(@acc, 256, 0);
+        let mut j : usize = 0;
+        while j < k {
+            // println!("d1ebug: i = {}, j = {}", i, j);
+            let mut idx_1 : usize = (j * k + i.into()).try_into().unwrap();
+            let Ahat_idx = Ahat.at(idx_1);
+            let y_ntt_j = y_ntt.at(j.try_into().unwrap());
+            // println!("d1ebug: i = {}, j = {}", i, j);
+            let product = array_from_span(mul_ntt(Ahat_idx.span(), y_ntt_j.span()));
+            // println!("product length: {}", product.len());
+            // println!("acc length: {}", acc.len());
 
-    // placeholder return
-    ArrayTrait::new()
+            // let product : Array<u16> = array_from_span(
+            //     mul_ntt( Ahat[idx_1].span(), y_ntt[j.try_into().unwrap()].span())
+            // );
+            // acc[i] = acc[i] + product[i] mod q
+            let mut idx2 = 0;
+            while idx2 < 256 {
+                let sum = add_mod(*acc.at(idx2), *product.at(idx2));
+                acc = set_array_at(acc, idx2, sum);
+                idx2 += 1;
+            }
+            j += 1;
+        }
+        // ntt inverse on acc
+        let acc_inv = array_from_span(ntt(acc.span()));
+        // add e1
+        let mut idx3 = 0;
+        let mut acc2: Array<u16> = ArrayTrait::new();
+        while idx3 < 256{
+            let e1_i = e1.at(i.into());
+            let sum = add_mod(*acc_inv.at(idx3), *e1_i.at(idx3));
+            // let sum = add_mod(*acc_inv.at(idx3), *e1.at(i.into()).at(idx3));
+
+            acc2.append(sum);
+            idx3 += 1;
+        }
+        uHat.append(acc2);
+        i += 1
+    }
+    // compute mu through decompress
+    println!("Computing mu through decompress\n");
+    let mu : Array<u16> = decompress(@byte_decode(m, 1) , 1);
+    // compute v
+    println!("Computing v\n");
+    let mut v : Array<u16> = ArrayTrait::new();
+    // first compute tHat * y_ntt
+    let mut acc: Array<u16> = ArrayTrait::new();
+    acc = append_n_zeroes(@acc, 256, 0);
+    i = 0;
+
+    println!("Computing tHat * y_ntt\n");
+    while i < k.try_into().unwrap(){
+        let tHat_i = tHat.at(i.into());
+        let y_ntt_i = y_ntt.at(i.into());
+        let product = array_from_span(mul_ntt(tHat_i.span(), y_ntt_i.span()));
+        // let product : Array<u16> = array_from_span(
+        //     mul_ntt( tHat[i.into()].span(), y_ntt[i.into()].span())
+        // );
+        print!("Multiplying tHat[{}] and y_ntt[{}]\n", i, i);
+        let mut idx2 = 0;
+        while idx2 < 256 {
+            let sum = add_mod(*acc.at(idx2), *product.at(idx2));
+            acc = set_array_at(acc, idx2, sum);
+            idx2 += 1;
+        }
+        i += 1;
+    }
+    println!("tHat * y_ntt computed\n");
+    // ntt inverse on acc
+    let acc_inv = array_from_span(ntt(acc.span()));
+    // add e2 and mu
+    let mut idx3 = 0;
+    print!("Adding e2 and mu to acc_inv to compute v\n");
+    while idx3 < 256{
+        let sum1 = add_mod(*acc_inv.at(idx3), *e2.at(idx3));
+        let sum2 = add_mod(sum1, *mu.at(idx3));
+        v.append(sum2);
+        idx3 += 1;
+    }
+    print!("v computed\n");
+    // compute c1, c2
+    let mut c1 : Array<u8> = ArrayTrait::new();
+    let c2 : Array<u8> = byte_encode(@compress(@v, dv), dv);
+
+    print!("Computing c1\n");
+    i = 0;
+    while i < k.try_into().unwrap(){
+        let uHat_i = uHat.at(i.into());
+        let compressed_poly = compress(uHat_i, du);
+        let encoded_poly = byte_encode(@compressed_poly, du);
+        for byte in encoded_poly{
+            c1.append(byte);
+        }
+        i += 1;
+    }
+
+
+    // return concat_arrays(c1, c2)
+    print!("kpke_encrypt End\n");
+    concat_arrays(@c1, @c2)
 }
 
 
