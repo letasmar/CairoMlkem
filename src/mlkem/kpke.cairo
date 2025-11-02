@@ -312,6 +312,75 @@ pub fn kpke_encrypt(ek : @Array<u8>, m : @Array<u8>, r : @Array<u8>, k : usize, 
     concat_arrays(@c1, @c2)
 }
 
+pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: usize, dv: usize) -> Array<u8> {
+    // print!("Running kpke_decrypt\n");
+    // get c_1 and c_2 from cipher
+    let c1 = cipher.slice(0, 32 * k * du);
+    let c2 = cipher.slice(32 * k * du, cipher.len() - (32 * k * du));
+
+    let c1_bytes : usize = ((du * 256  + 7) / 8) * k;
+    let c2_bytes : usize = ((dv * 256  + 7) / 8);
+
+    // reconstruct uHat from c1
+    let mut uHat : Array<Array<u16>> = ArrayTrait::new();
+    let mut i : usize = 0;
+    while i < k {
+        let offset : usize = i * c1_bytes / k;
+        let encoded_poly = c1.slice(offset, c1_bytes / k);
+        let decoded_poly = byte_decode(@array_from_span(encoded_poly), du);
+        let decompressed_poly = decompress(@decoded_poly, du);
+        uHat.append(decompressed_poly);
+        i += 1;
+    }
+    // reconstruct v from c2
+    let decoded_v = byte_decode(@array_from_span(c2), dv);
+    let v = decompress(@decoded_v, dv);
+
+    let mut s_ntt : Array<Array<u16>> = ArrayTrait::new();
+    let bytesPerPoly : usize = ((12 * 256 + 7) / 8);
+    i = 0;
+    while i < k {
+        let offset : usize = i * bytesPerPoly;
+        let encoded_poly = dk.slice(offset, bytesPerPoly);
+        let decoded_poly = byte_decode(@array_from_span(encoded_poly), 12);
+        s_ntt.append(decoded_poly);
+        i += 1;
+    }
+
+    // compute w
+    let mut w : Array<u16> = ArrayTrait::new();
+
+    w = append_n_zeroes(@w, 256, 0);
+    i = 0;
+    while i < k.try_into().unwrap(){
+        let uHat_i = uHat.at(i.into());
+        let s_ntt_i = s_ntt.at(i.into());
+        let product = array_from_span(mul_ntt(uHat_i.span(), s_ntt_i.span()));
+        // let product : Array<u16> = array_from_span(
+        //     mul_ntt( uHat[i.into()].span(), s_ntt[i.into
+        // ].span())
+        // );
+        let mut idx2 = 0;
+        while idx2 < 256 {
+            let sum = add_mod(*w.at(idx2), *product.at(idx2));
+            w = set_array_at(w, idx2, sum);
+            idx2 += 1;
+        }
+        i += 1;
+    }
+    // ntt inverse on w
+    let w_inv = ntt(w.span());
+    let mut final_w = ArrayTrait::new();
+    i = 0;
+    while i < 256{
+        final_w.append(*v.at(i) - *w_inv.at(i));
+        i += 1;
+    }
+    w = final_w;
+    let compressed_w = compress(@w, 1);
+    // print!("kpke_decrypt End\n");
+    byte_encode(@compressed_w, 1) 
+}
 
 /// generate vector
 pub fn generate_vector( k : usize, sigma : @Array<u8>, eta : usize, mut big_n : u8) -> ( Array<Array<u16>>, u8 ){

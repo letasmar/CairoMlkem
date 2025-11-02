@@ -7,6 +7,7 @@ use crate::utils::concat_arrays;
 use crate::hashes::H;
 use crate::hashes::G;
 use crate::mlkem::kpke;
+use crate::utils::array_from_span;
 
 /// MLKEM-512 key generation
 /// Returns a struct containing the encapsulation key and decapsulation key
@@ -111,6 +112,32 @@ pub fn mlkem_encaps_512_impl( ek : @Array<u8> ) -> keyCipher{
     kc
 }
 
+pub fn mlkem_decaps_512_impl( dk : @Array<u8>, cipher : @Array<u8> ) -> Array<u8>{
+    // print!("Running mlkem_decaps_512_impl\n");
+    let dk_array = dk.clone();
+    let dk_span = dk_array.span();
+    let dk_pke = dk_span.slice(0, 384 * MLKEM512_K);
+    let ek_pke = dk_span.slice(384 * MLKEM512_K, MLKEM512_ENCAPS_K);
+    let h = dk_span.slice(768 * MLKEM512_K, 32  );
+    let z = dk_span.slice(768 * MLKEM512_K + 32, 32 );
+
+
+    let m = kpke::kpke_decrypt(dk_pke, cipher, MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
+
+    // derive shared key K
+    let (K_prime, r_prime ) = G(concat_arrays(@m, @H(array_from_span(ek_pke))));
+    let c_prime = kpke::kpke_encrypt(array_from_span(ek_pke), @m, @r_prime, MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
+    if(c_prime.len() != cipher.len()){
+        panic!("Ciphertext lengths do not match");
+    }
+    if(c_prime != *cipher){
+        // print!("Decapsulation failed, returning z\n");
+        panic!("Decapsulation failed, ciphertexts do not match");
+        return array_from_span(z);
+    }
+
+    K_prime
+}
 // pub fn mlkem_key_gen_512_impl() -> keys{
 //     print!("Running mlkem_key_gen_512_impl\n");
 //     // internal needs two random 32byte seeds
