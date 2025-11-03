@@ -74,33 +74,39 @@ pub fn mlkem_key_gen_512() -> keys{
     // internal needs two random 32byte seeds
     mlkem_internal::mlkem_key_gen_512_impl()
 }
-pub fn mlkem_key_gen_768() -> keys{
-    mlkem_internal::mlkem_key_gen_768_impl()
-}
-pub fn mlkem_key_gen_1024() -> keys{
-    mlkem_internal::mlkem_key_gen_1024_impl()
-}
+// pub fn mlkem_key_gen_768() -> keys{
+//     mlkem_internal::mlkem_key_gen_768_impl()
+// }
+// pub fn mlkem_key_gen_1024() -> keys{
+//     mlkem_internal::mlkem_key_gen_1024_impl()
+// }
 
-pub fn mlkem_encaps_512( ek : @Array<u8> ) -> keyCipher{
+/// MLKEM-512 encapsulation
+/// # Arguments
+/// * `ek` - encapsulation key
+/// * `m` - message to be encapsulated - hardcoded for testing
+/// # Returns
+/// * `keyCipher` - struct containing the shared key and ciphertext
+pub fn mlkem_encaps_512( ek : Span<u8> ) -> keyCipher{
     // internal needs one random 32byte for the message
     mlkem_internal::mlkem_encaps_512_impl(ek)
 }
-pub fn mlkem_encaps_768( ek : @Array<u8> ) -> keyCipher{
-    // internal needs one random 32byte for the message
-    mlkem_internal::mlkem_encaps_768_impl(ek)
-}
-pub fn mlkem_encaps_1024( ek : @Array<u8> ) -> keyCipher{
-    // internal needs one random 32byte for the message
-    mlkem_internal::mlkem_encaps_1024_impl(ek)
-}
+// pub fn mlkem_encaps_768( ek : @Array<u8> ) -> keyCipher{
+//     // internal needs one random 32byte for the message
+//     mlkem_internal::mlkem_encaps_768_impl(ek)
+// }
+// pub fn mlkem_encaps_1024( ek : @Array<u8> ) -> keyCipher{
+//     // internal needs one random 32byte for the message
+//     mlkem_internal::mlkem_encaps_1024_impl(ek)
+// }
 
 
-pub fn mlkem_decaps_512( dk : @Array<u8>, cipher : @Array<u8> ) -> Array<u8>{
+pub fn mlkem_decaps_512( dk : Span<u8>, cipher : Span<u8> ) -> Array<u8>{
     mlkem_internal::mlkem_decaps_512_impl(dk, cipher)
 }
-pub fn mlkem_decaps_768( dk : @Array<u8>, cipher : @Array<u8> ) -> Array<u8>{
-    mlkem_internal::mlkem_decaps_768_impl(dk, cipher)
-}
-pub fn mlkem_decaps_1024( dk : @Array<u8>, cipher : @Array<u8> ) -> Array<u8>{
-    mlkem_internal::mlkem_decaps_1024_impl(dk, cipher)
-}
+// pub fn mlkem_decaps_768( dk : @Array<u8>, cipher : @Array<u8> ) -> Array<u8>{
+//     mlkem_internal::mlkem_decaps_768_impl(dk, cipher)
+// }
+// pub fn mlkem_decaps_1024( dk : @Array<u8>, cipher : @Array<u8> ) -> Array<u8>{
+//     mlkem_internal::mlkem_decaps_1024_impl(dk, cipher)
+// }

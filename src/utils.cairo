@@ -8,7 +8,8 @@ use crate::mlkem::{MLKEM_Qu16, MLKEM_Q};
 use core::num::traits::{Bounded, WrappingAdd};
 use core::traits::{BitAnd, BitOr, BitXor, BitNot};
 
-
+/// copies the input array and sets the value at index to new_val
+/// very inefficient, should not be used in loops or performance critical code
 pub fn set_array_at<T, +Copy<T>, +Drop<T>>(arr: Array<T>, index: usize, new_val: T) -> Array<T> {
     let mut new_arr = ArrayTrait::new();
     let len = arr.len();
@@ -179,7 +180,7 @@ pub impl Word64WordOperations of WordOperations<Word64> {
 /// * `data` - Array of u8 bytes to convert
 /// #### Returns
 /// * `Array<Word64>` - Array of Word64 values (8 bytes per word)
-pub fn from_u8Array_to_WordArray(data: Array<u8>) -> Array<Word64> {
+pub fn from_u8Array_to_WordArray(data: Span<u8>) -> Array<Word64> {
     let mut new_arr: Array<Word64> = array![];
     let mut i = 0;
 
@@ -205,7 +206,7 @@ pub fn from_u8Array_to_WordArray(data: Array<u8>) -> Array<Word64> {
 /// * `data` - Array of u8 bytes to convert
 /// #### Returns
 /// * `Array<Word64>` - Array of Word64 values (8 bytes per word)
-pub fn from_u8Array_to_WordArray_Le(data: Array<u8>) -> Array<Word64> {
+pub fn from_u8Array_to_WordArray_Le(data: Span<u8>) -> Array<Word64> {
     let mut new_arr: Array<Word64> = array![];
     let mut i = 0;
 
@@ -315,7 +316,7 @@ fn math_shr_precomputed<T, +Div<T>, +Rem<T>, +Drop<T>, +Copy<T>, +Into<T, u128>>
 // end of Alexandria package
 
 // Converts an array of MSB bits to a Array of bytes(u8)
-pub fn bits_to_bytes(bits: @Array<u8>) -> Array<u8> {
+pub fn bits_to_bytes(bits: Span<u8>) -> Array<u8> {
     if(bits.len() % 8 != 0){
         panic!("alignment issues");
     }
@@ -341,7 +342,7 @@ pub fn bits_to_bytes(bits: @Array<u8>) -> Array<u8> {
 
 /// Converts an array of bytes to an array of bits (0/1).
 /// Most-significant-bit first per byte.
-pub fn bytes_to_bits(bytes: @Array<u8>) -> Array<u8> {
+pub fn bytes_to_bits(bytes: Span<u8>) -> Array<u8> {
     let mut c = bytes.clone();
     let mut bits : Array<u8> = ArrayTrait::new();
     let mut i = 0;
@@ -359,7 +360,7 @@ pub fn bytes_to_bits(bytes: @Array<u8>) -> Array<u8> {
 }
 
 /// encodes an array of d-bit integers into a byte array, 1 <= d <= 12
-pub fn byte_encode(F: @Array<u16>, d : usize) -> Array<u8>{
+pub fn byte_encode(F: Span<u16>, d : usize) -> Array<u8>{
     if(F.len() != 256 || d < 1 || d > 12){
         panic!("Wrong parameters for byte_encode");
     }
@@ -380,11 +381,11 @@ pub fn byte_encode(F: @Array<u16>, d : usize) -> Array<u8>{
         }
         i += 1;
     }
-    bits_to_bytes(@b)
+    bits_to_bytes(b.span())
 }
 
 /// decodes a byte array into an array of d-bit integers, 1 <= d <= 12
-pub fn byte_decode(B : @Array<u8>, d : usize) -> Array<u16> {
+pub fn byte_decode(B : Span<u8>, d : usize) -> Array<u16> {
     if(B.len() % 32 != 0 || d < 1 || d > 12){
         panic!("Wrong parameters for byte_encode");
     }
@@ -412,7 +413,7 @@ pub fn byte_decode(B : @Array<u8>, d : usize) -> Array<u16> {
 }
 
 /// converts from Z_q to Z_(2^q)
-pub fn compress(input: @Array<u16>, d : usize) -> Array<u16>{
+pub fn compress(input: Span<u16>, d : usize) -> Array<u16>{
     if( d >= 12 ){
         panic!("Wrong d value");
     }
@@ -423,7 +424,7 @@ pub fn compress(input: @Array<u16>, d : usize) -> Array<u16>{
     let mut i = 0;
     print!("Looking for overflows in compress...\n");
     while( i < input.len()){
-        let tmp_overflow : u32 = ((*input[i]).into() * scale + MLKEM_Q/2);
+        let tmp_overflow : u32 = ((*input.at(i)).into() * scale + MLKEM_Q/2);
         let tmp = (tmp_overflow / MLKEM_Q) % scale.into();
         output.append(tmp.try_into().unwrap());
         i += 1;
@@ -433,7 +434,7 @@ pub fn compress(input: @Array<u16>, d : usize) -> Array<u16>{
 }
 
 /// converts from Z_(2^q) to Z_(2^q)
-pub fn decompress(input: @Array<u16>, d : usize) -> Array<u16>{
+pub fn decompress(input: Span<u16>, d : usize) -> Array<u16>{
     if( d >= 12 ){
         panic!("Wrong d value");
     }
@@ -444,7 +445,7 @@ pub fn decompress(input: @Array<u16>, d : usize) -> Array<u16>{
 
     let mut i = 0;
     while( i < input.len()){
-        let tmp_overflow : u32 = ((*input[i]).into() * MLKEM_Q + rounding);
+        let tmp_overflow : u32 = ((*input.at(i)).into() * MLKEM_Q + rounding);
         let tmp = tmp_overflow / scale;
         output.append(tmp.try_into().unwrap());
         i += 1;
@@ -452,7 +453,7 @@ pub fn decompress(input: @Array<u16>, d : usize) -> Array<u16>{
     output
 }
 
-pub fn concat_arrays<T, +Copy<T>, +Drop<T>>(a: @Array<T>, b: @Array<T>) -> Array<T> {
+pub fn concat_arrays<T, +Copy<T>, +Drop<T>>(a: Span<T>, b: Span<T>) -> Span<T> {
     let mut result: Array<T> = ArrayTrait::new();
     let mut i = 0;
     while i < a.len() {
@@ -464,7 +465,7 @@ pub fn concat_arrays<T, +Copy<T>, +Drop<T>>(a: @Array<T>, b: @Array<T>) -> Array
         result.append(*b.at(i));
         i += 1;
     }
-    result
+    result.span()
 }
 
 pub fn array_from_span<T, +Copy<T>, +Drop<T>>(span: Span<T>) -> Array<T> {
@@ -477,19 +478,19 @@ pub fn array_from_span<T, +Copy<T>, +Drop<T>>(span: Span<T>) -> Array<T> {
     result
 }
 
-pub fn append_n_zeroes<T, +Copy<T>, +Drop<T>>(arr: @Array<T>, n: usize, zero: T) -> Array<T> {
-    let mut result: Array<T> = ArrayTrait::new();
+pub fn append_n_zeroes<T, +Copy<T>, +Drop<T>>(mut arr: Array<T>, n: usize, zero: T) -> Array<T> {
+    // let mut result: Array<T> = ArrayTrait::new();
+    // let mut i = 0;
+    // while i < arr.len() {
+    //     result.append(*arr.at(i));
+    //     i += 1;
+    // }
     let mut i = 0;
-    while i < arr.len() {
-        result.append(*arr.at(i));
-        i += 1;
-    }
-    i = 0;
     while i < n {
-        result.append(zero);
+        arr.append(zero);
         i += 1;
     }
-    result
+    arr
 }
 
 fn set_modulus( d: usize) -> u16{
