@@ -164,11 +164,9 @@ pub fn ntt_kyber(mut f : Span<u16>) -> Span<u16> {
     let mut fHat = array_from_span(f);
     let mut i : u8 = 1;
     let zeta = get_zeta();
-    // print!("Got zeta roots\n");
 
     let mut len : usize = 128;
     while(len >= 2){
-        // print!("NTT stage with len = {}\n", len);
         let mut start : usize = 0;
         while(start < 256){
             let zeta_i = *zeta.at(i.into());
@@ -180,24 +178,11 @@ pub fn ntt_kyber(mut f : Span<u16>) -> Span<u16> {
                 let fHat_at_idx = *fHat.at(idx);
                 let fHat_at_j = *fHat.at(j.into());
 
-                // if(i == 35){
-                    // print out all values
-                    // print!("i: {}, j: {}, idx: {}, zeta_i: {}, fHat_at_j: {}, fHat_at_idx: {}\n", i, j, idx, zeta_i, fHat_at_j, fHat_at_idx);
-                // }
-
                 let t : u16 = mul_mod(zeta_i, fHat_at_idx);
-                // if(i == 35){
-                    // print!("Computed t: {}\n", t);
-                    // // print sub and add results
-                    // print!("Sub result: {}\n", sub_mod(fHat_at_j, t));
-                    // print!("Add result: {}\n", add_mod(fHat_at_j, t));
-                // }
                 fHat = set_array_at(fHat, idx, sub_mod(fHat_at_j, t));
-                fHat = set_array_at(fHat, j.into(), add_mod(fHat_at_j, t));
+                fHat = set_array_at(fHat, j, add_mod(fHat_at_j, t));
                 j += 1;
             }
-            // print!("Completed NTT sub-stage starting at {}\n", start);
-            // print!("Current i: {}\n", i);
             start = start + 2 * len;
         }
 
@@ -208,10 +193,10 @@ pub fn ntt_kyber(mut f : Span<u16>) -> Span<u16> {
 }
 
 pub fn ntt_kyber_inv(mut fHat : Span<u16>) -> Span<u16> {
+
+    print!("Computing Inverse NTT Kyber========\n");
     let mut f = array_from_span(fHat);
     let mut i : usize = 127;
-
-
     let zeta = get_zeta();
 
     let mut len : usize = 2;
@@ -227,9 +212,9 @@ pub fn ntt_kyber_inv(mut fHat : Span<u16>) -> Span<u16> {
                 let idx : u32 = j + len;
                 let f_at_idx = *f.at(idx);
 
-                f = set_array_at(f.clone(), j.into(), add_mod(t, f_at_idx));
                 let temp = sub_mod(f_at_idx, t);
-                f = set_array_at(f.clone(), idx, mul_mod(zeta_i, temp));
+                f = set_array_at(f, j, add_mod(t, f_at_idx));
+                f = set_array_at(f, idx, mul_mod(zeta_i, temp));
                 j += 1;
             }
             start = start + 2 * len;
@@ -237,13 +222,14 @@ pub fn ntt_kyber_inv(mut fHat : Span<u16>) -> Span<u16> {
 
         len = len * 2;
     }
-
+    print!("Multiplying by n^-1\n");
     // multiply by n^-1
     let n_inv = MLKEM_Q_INVN;
     let mut f_mul : Array<u16> = ArrayTrait::new();
     for val in @f{
         f_mul.append(mul_mod(*val, n_inv));
     }
+    print!("==================Completed Inverse NTT Kyber\n");
 
     f_mul.span()
 }
