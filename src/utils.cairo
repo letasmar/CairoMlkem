@@ -422,14 +422,12 @@ pub fn compress(input: Span<u16>, d : usize) -> Array<u16>{
     let mut output : Array<u16> = ArrayTrait::new();
 
     let mut i = 0;
-    print!("Looking for overflows in compress...\n");
     while( i < input.len()){
         let tmp_overflow : u32 = ((*input.at(i)).into() * scale + MLKEM_Q/2);
         let tmp = (tmp_overflow / MLKEM_Q) % scale.into();
         output.append(tmp.try_into().unwrap());
         i += 1;
     }
-    print!("No overflows found in compress!\n");
     output
 }
 

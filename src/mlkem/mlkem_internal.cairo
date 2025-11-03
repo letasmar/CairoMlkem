@@ -118,12 +118,20 @@ pub fn mlkem_decaps_512_impl( dk_span : Span<u8>, cipher : Span<u8> ) -> Array<u
     let h = dk_span.slice(768 * MLKEM512_K, 32  );
     let z = dk_span.slice(768 * MLKEM512_K + 32, 32 );
 
-    println!("Running kpke_decrypt");
     let m = kpke::kpke_decrypt(dk_pke, cipher, MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
-    println!("kpke_decrypt completed");
     // derive shared key K
+    println!("Deriving shared key K'");
+    // print K bytes
+
     let (K_prime, r_prime ) = G(concat_arrays(m.span(), H(ek_pke).span()));
+    println!("Derived K' with length: {}", K_prime.len());
+    for byte in K_prime.span(){
+        println!(" {:x}", *byte);
+    }
+
+    println!("Re-encrypting to verify ciphertext");
     let c_prime = kpke::kpke_encrypt(ek_pke, m.span(), r_prime.span(), MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
+
     if(c_prime.len() != cipher.len()){
         panic!("Ciphertext lengths do not match");
     }

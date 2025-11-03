@@ -2,8 +2,8 @@ use crate::mlkem::keys;
 use crate::mlkem::keys_init;
 use crate::hashes::{G, prfEta};
 use crate::samples::{sample_ntt, sample_poly_cbd};
-use crate::ntt::ntt;
-use crate::ntt::mul_ntt;
+use crate::ntt::ntt_kyber;
+use crate::ntt::multiply_ntt_kyber;
 use crate::zq::add_mod;
 use crate::zq::sub_mod;
 use crate::utils::array_from_span;
@@ -27,14 +27,14 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     // G is SHA3-512
     let (rho, sigma ) = G(d.clone());
 
-    // print!("Rho length: {}, Sigma length: {}\n", rho.len(), sigma.len());
+    print!("Rho length: {}, Sigma length: {}\n", rho.len(), sigma.len());
     let mut big_n0 : u8 = 0;
     let mut i : u8 = 0;
     // generate matrix Ahat
     let mut Ahat : Array<Array<u16>> = generate_matrix(k, rho.clone());
 
     // print Ahat size
-    // println!("Ahat has {} rows", Ahat.len());
+    println!("Ahat has {} rows", Ahat.len());
     // println!("Each row has {} columns", Ahat.at(0).len());
 
     // generate s vector 
@@ -50,24 +50,26 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     // }
 
     //print s size
-    // println!("s has {} polynomials", s.len());
+    println!("s has {} polynomials", s.len());
     // println!("Each polynomial has {} coefficients", s.at(0).len());
 
     // generate e vector
     let (mut e, mut big_n2) = generate_vector( k, sigma.span(), eta, big_n1);
     // print e size
-    // println!("e has {} polynomials", e.len());
+    println!("e has {} polynomials", e.len());
     // println!("Each polynomial has {} coefficients", e.at(0).len());
 
     // run ntt on s and e each coordinate
     let mut s_ntt : Array<Array<u16>> = ArrayTrait::new();
     let mut e_ntt : Array<Array<u16>> = ArrayTrait::new();
     for poly in s{
-        s_ntt.append(array_from_span(ntt(poly.span())));
+        s_ntt.append(array_from_span(ntt_kyber(poly.span())));
     }
     for poly in e{
-        e_ntt.append(array_from_span(ntt(poly.span())));
+        e_ntt.append(array_from_span(ntt_kyber(poly.span())));
     }
+
+    print!("s_ntt and e_ntt computed\n");
 
     // declare tHat
     let mut tHat : Array<Array<u16>> = ArrayTrait::new();
@@ -77,13 +79,14 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     while i < k.try_into().unwrap(){
         // acc = tHat[i]
         let mut acc: Array<u16> = ArrayTrait::new(); 
+        print!("Computing tHat polynomial {}\n", i);
         acc = append_n_zeroes(acc, 256, 0);
 
         let mut j : usize = 0;
         while j < k {
             let mut idx : usize = (i.into() * k + j).try_into().unwrap();
             let product : Array<u16> = array_from_span(
-                mul_ntt( Ahat[idx].span(), s_ntt[j.try_into().unwrap()].span())
+                multiply_ntt_kyber( Ahat[idx].span(), s_ntt[j.try_into().unwrap()].span())
             );
             let mut idx2 = 0;
             while idx2 < 256 {
@@ -106,7 +109,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
         i += 1;
     }
     // print tHat size
-    // println!("tHat has {} polynomials", tHat.len());
+    println!("tHat has {} polynomials", tHat.len());
     // println!("Each polynomial has {} coefficients", tHat.at(0).len());
 
 
@@ -136,7 +139,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     
     key_pair.ek_len = key_pair.ek.len().try_into().unwrap();
     key_pair.dk_len = key_pair.dk.len().try_into().unwrap();
-    // print!("Kpke KeyGen End eklength: {} dk length: {}\n", key_pair.ek_len, key_pair.dk_len);
+    print!("Kpke KeyGen End eklength: {} dk length: {}\n", key_pair.ek_len, key_pair.dk_len);
     key_pair
 }
 
@@ -154,16 +157,13 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     let mut tHat : Array<Array<u16>> = ArrayTrait::new();
 
     // print out accessed indexes for debugging
-    println!("ek length: {}", ek_span.len());
-    println!("last byte index: {}", *ek_span.at(799));
-    println!("k value: {}", k);
+    // println!("ek length: {}", ek_span.len());
+    // println!("last byte index: {:x}", *ek_span.at(799));
+    // println!("k value: {}", k);
     while i < k.try_into().unwrap(){
-        print!("1This should display {} times\n", k);
         let start_idx : usize = i.into() * 384;
         let end_idx : usize = start_idx + 384;
-        print!("Accessing ek from index {} to {}\n", start_idx, end_idx);
         let encoded_poly = ek_span.slice(start_idx, 384);
-        print!("2This should display {} times\n", k);
         // change everything to use spans
         tHat.append(byte_decode(encoded_poly, 12));
         // let enconded_poly = ek.clone().slice(start_idx, end_idx);
@@ -175,7 +175,6 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     // obtain rho
     let rho_start_idx : usize = k * 384;
     let rho = ek_span.slice(rho_start_idx, 32);
-    print!("Rho obtained\n");
 
 
 
@@ -183,14 +182,17 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     let Ahat : Array<Array<u16>> = generate_matrix(k, array_from_span(rho));
     println!("Ahat regenerated with dimensions: {} x {}\n", Ahat.len(), Ahat.at(0).len());
     //generate y
+    println!("Generating y vector\n");
     let (mut y, mut big_n1) = generate_vector( k, r, eta, big_n);
     big_n = big_n1;
     
     //generate e1
+    println!("Generating e1 vector\n");
     let (mut e1, mut big_n2) = generate_vector( k, r, eta, big_n);
     big_n = big_n2;
 
     // sample e2, as a single vector
+    println!("Generating e2 vector\n");
     let e2 : Array<u16> = sample_poly_cbd(prfEta(eta, r, big_n), eta);
     
 
@@ -199,7 +201,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     i = 0;
     let mut y_ntt : Array<Array<u16>> = ArrayTrait::new();
     for poly in y{
-        y_ntt.append(array_from_span(ntt(poly.span())));
+        y_ntt.append(array_from_span(ntt_kyber(poly.span())));
     }
 
     print!("y_ntt computed\n");
@@ -217,7 +219,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
             let Ahat_idx = Ahat.at(idx_1);
             let y_ntt_j = y_ntt.at(j.try_into().unwrap());
             // println!("d1ebug: i = {}, j = {}", i, j);
-            let product = array_from_span(mul_ntt(Ahat_idx.span(), y_ntt_j.span()));
+            let product = array_from_span(multiply_ntt_kyber(Ahat_idx.span(), y_ntt_j.span()));
             // println!("product length: {}", product.len());
             // println!("acc length: {}", acc.len());
 
@@ -234,7 +236,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
             j += 1;
         }
         // ntt inverse on acc
-        let acc_inv = array_from_span(ntt(acc.span()));
+        let acc_inv = array_from_span(ntt_kyber(acc.span()));
         // add e1
         let mut idx3 = 0;
         let mut acc2: Array<u16> = ArrayTrait::new();
@@ -264,7 +266,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     while i < k.try_into().unwrap(){
         let tHat_i = tHat.at(i.into());
         let y_ntt_i = y_ntt.at(i.into());
-        let product = array_from_span(mul_ntt(tHat_i.span(), y_ntt_i.span()));
+        let product = array_from_span(multiply_ntt_kyber(tHat_i.span(), y_ntt_i.span()));
         // let product : Array<u16> = array_from_span(
         //     mul_ntt( tHat[i.into()].span(), y_ntt[i.into()].span())
         // );
@@ -279,7 +281,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     }
     println!("tHat * y_ntt computed\n");
     // ntt inverse on acc
-    let acc_inv = array_from_span(ntt(acc.span()));
+    let acc_inv = array_from_span(ntt_kyber(acc.span()));
     // add e2 and mu
     let mut idx3 = 0;
     print!("Adding e2 and mu to acc_inv to compute v\n");
@@ -356,7 +358,7 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
     while i < k.try_into().unwrap(){
         let uHat_i = uHat.at(i.into());
         let s_ntt_i = s_ntt.at(i.into());
-        let product = array_from_span(mul_ntt(uHat_i.span(), s_ntt_i.span()));
+        let product = array_from_span(multiply_ntt_kyber(uHat_i.span(), s_ntt_i.span()));
         // let product : Array<u16> = array_from_span(
         //     mul_ntt( uHat[i.into()].span(), s_ntt[i.into
         // ].span())
@@ -369,21 +371,16 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
         }
         i += 1;
     }
-    println!("Overflow ccccccccc");
     // ntt inverse on w
-    let w_inv = ntt(w.span());
+    let w_inv = ntt_kyber(w.span());
     let mut final_w = ArrayTrait::new();
     i = 0;
-    println!("Overflow ccccccccc");
     while i < 256{
         final_w.append(sub_mod(*v.at(i), *w_inv.at(i)));
         i += 1;
     }
-    println!("Overflow c");
     w = final_w;
-    println!("Overflow ccccccccc");
     let compressed_w = compress(w.span(), 1);
-    println!("Overflow ccccccccc");
     // print!("kpke_decrypt End\n");
     byte_encode(compressed_w.span(), 1) 
 }
