@@ -53,14 +53,14 @@ pub fn H( input : Span<u8> ) -> Array<u8>{
 }
 
 /// input should be 32 bytes, produces output according to eta*64
-pub fn prfEta( eta: usize, input : Span<u8>, byte: u8) -> Span<u8>{
+pub fn prfEta( eta: usize, input : Span<u8>, byte: u8) -> Array<u8>{
     if(input.len() != 32_usize){
         panic!("Input must be 32 bytes long");
     }
     let mut array_from_byte = ArrayTrait::new();
     array_from_byte.append(byte);
     let input_ext = concat_arrays(input, array_from_byte.span());
-    shake256_xof(input_ext, eta * 64).span()
+    shake256_xof(input_ext, eta * 64)
 }
 
 /// takes variable length input, produces 32bytes of shake256 output

@@ -160,15 +160,15 @@ pub fn intt(mut f_ntt: Span<u16>) -> Span<u16> {
 
 // Compute the NTT of a polynomial in Kyber parameters
 pub fn ntt_kyber(mut f : Span<u16>) -> Span<u16> {
-    print!("Computing NTT Kyber========\n");
+    // print!("Computing NTT Kyber========\n");
     let mut fHat = array_from_span(f);
     let mut i : u8 = 1;
     let zeta = get_zeta();
-    print!("Got zeta roots\n");
+    // print!("Got zeta roots\n");
 
     let mut len : usize = 128;
     while(len >= 2){
-        print!("NTT stage with len = {}\n", len);
+        // print!("NTT stage with len = {}\n", len);
         let mut start : usize = 0;
         while(start < 256){
             let zeta_i = *zeta.at(i.into());
@@ -182,28 +182,28 @@ pub fn ntt_kyber(mut f : Span<u16>) -> Span<u16> {
 
                 // if(i == 35){
                     // print out all values
-                    print!("i: {}, j: {}, idx: {}, zeta_i: {}, fHat_at_j: {}, fHat_at_idx: {}\n", i, j, idx, zeta_i, fHat_at_j, fHat_at_idx);
+                    // print!("i: {}, j: {}, idx: {}, zeta_i: {}, fHat_at_j: {}, fHat_at_idx: {}\n", i, j, idx, zeta_i, fHat_at_j, fHat_at_idx);
                 // }
 
                 let t : u16 = mul_mod(zeta_i, fHat_at_idx);
                 // if(i == 35){
-                    print!("Computed t: {}\n", t);
-                    // print sub and add results
-                    print!("Sub result: {}\n", sub_mod(fHat_at_j, t));
-                    print!("Add result: {}\n", add_mod(fHat_at_j, t));
+                    // print!("Computed t: {}\n", t);
+                    // // print sub and add results
+                    // print!("Sub result: {}\n", sub_mod(fHat_at_j, t));
+                    // print!("Add result: {}\n", add_mod(fHat_at_j, t));
                 // }
                 fHat = set_array_at(fHat, idx, sub_mod(fHat_at_j, t));
                 fHat = set_array_at(fHat, j.into(), add_mod(fHat_at_j, t));
                 j += 1;
             }
-            print!("Completed NTT sub-stage starting at {}\n", start);
-            print!("Current i: {}\n", i);
+            // print!("Completed NTT sub-stage starting at {}\n", start);
+            // print!("Current i: {}\n", i);
             start = start + 2 * len;
         }
 
         len = len / 2;
     }
-    print!("==================Completed NTT Kyber\n");
+    // print!("==================Completed NTT Kyber\n");
     fHat.span()
 }
 

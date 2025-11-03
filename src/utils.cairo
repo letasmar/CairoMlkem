@@ -1,4 +1,4 @@
-// the most of the following is pasted from sha512 Alexandria package - namely constants for sha512 and Word64 struct with interfaces
+// the some of the following is pasted from sha512 Alexandria package - namely constants for sha512 and Word64 struct with interfaces
 // accessed on the 29th October, 2025 https://github.com/keep-starknet-strange/alexandria/blob/ab6d8ca6be71a62c26799c2ec7f91814cde48b54/packages/math/src/sha512.cairo
 
 // Variable naming is compliant to RFC-6234 (https://datatracker.ietf.org/doc/html/rfc6234)
@@ -392,7 +392,7 @@ pub fn byte_decode(B : Span<u8>, d : usize) -> Array<u16> {
     let m : u16 = set_modulus(d);
     let b = bytes_to_bits(B);
 
-    let powers_2 = @get_powers_2();
+    let powers_2 = get_powers_2();
     let mut F : Array<u16> = ArrayTrait::new();
     let mut i = 0;
     while i < 256_usize{
@@ -401,7 +401,7 @@ pub fn byte_decode(B : Span<u8>, d : usize) -> Array<u16> {
         while j < d {
             let idx = i * d + j;
             let b_val: usize = (*b.at(idx)).into(); // get bit as usize (0 or 1)
-            let p = *powers_2.at(j);
+            let p = *powers_2.at(j); // although powers of 2 go up to 2^12 successively, d <= 12 so this is safe
             sum += b_val * p.try_into().unwrap();
             j += 1;
         }
@@ -417,7 +417,7 @@ pub fn compress(input: Span<u16>, d : usize) -> Array<u16>{
     if( d >= 12 ){
         panic!("Wrong d value");
     }
-    let powers_2 = @get_powers_2();
+    let powers_2 = get_powers_2();
     let scale : u32 = (*powers_2[d]).try_into().unwrap();
     let mut output : Array<u16> = ArrayTrait::new();
 
@@ -436,7 +436,7 @@ pub fn decompress(input: Span<u16>, d : usize) -> Array<u16>{
     if( d >= 12 ){
         panic!("Wrong d value");
     }
-    let powers_2 = @get_powers_2();
+    let powers_2 = get_powers_2();
     let scale : u32 = (*powers_2[d]).try_into().unwrap();
     let rounding : u32 = (*powers_2[d-1]).try_into().unwrap();
     let mut output : Array<u16> = ArrayTrait::new();
@@ -527,7 +527,7 @@ pub fn pow(base: u8, exponent: u32) -> u8 {
 
 // for use in loops, expensive
 // Powers of two to avoid recomputing, save in function
-pub fn get_powers_2() -> Array<u64> {
+pub fn get_powers_2() -> Span<u64> {
     let mut power_2: Array<u64> = ArrayTrait::new();
     power_2.append( TWO_POW_0 );
     power_2.append( TWO_POW_1 );
@@ -547,5 +547,18 @@ pub fn get_powers_2() -> Array<u64> {
     power_2.append( TWO_POW_40 );
     power_2.append( TWO_POW_48 );
     power_2.append( TWO_POW_56 );
-    power_2
+    power_2.span()
+}
+
+pub fn print_u8_span_hex(arr: Span<u8>) -> () {
+    for i in 0..arr.len() {
+        println!("arr.append(0x{:x});", *arr.at(i));
+    }
+}
+
+
+pub fn print_u16_span_dec(arr: Span<u16>) -> () {
+    for i in 0..arr.len() {
+        println!("arr.append({});", *arr.at(i));
+    }
 }

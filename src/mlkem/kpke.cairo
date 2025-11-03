@@ -14,6 +14,8 @@ use crate::utils::byte_decode;
 use crate::utils::decompress;
 use crate::utils::compress;
 use crate::utils::concat_arrays;
+use crate::utils::print_u16_span_dec;
+use crate::utils::print_u8_span_hex;
 
 /// d is random seed of 32 bytes, others are mlkem parameters
 /// keys struct contains ek and dk as u8 arrays
@@ -26,7 +28,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     // here perhaps d should be concatenated with k
     // G is SHA3-512
     let (rho, sigma ) = G(d.clone());
-
+    let rho_span = rho.span();
     print!("Rho length: {}, Sigma length: {}\n", rho.len(), sigma.len());
     let mut big_n0 : u8 = 0;
     let mut i : u8 = 0;
@@ -39,15 +41,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
 
     // generate s vector 
     let (mut s, mut big_n1) = generate_vector( k, sigma.span(), eta, big_n0);
-    // i = 0;
-    // while i < k.try_into().unwrap(){
-    //     s.append(
-    //         sample_poly_cbd(@prfEta(eta, sigma.clone(), big_n),
-    //         eta.try_into().unwrap())
-    //     );
-    //     i += 1;
-    //     big_n += 1;
-    // }
+
 
     //print s size
     println!("s has {} polynomials", s.len());
@@ -62,10 +56,10 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     // run ntt on s and e each coordinate
     let mut s_ntt : Array<Array<u16>> = ArrayTrait::new();
     let mut e_ntt : Array<Array<u16>> = ArrayTrait::new();
-    for poly in s{
+    for poly in s.span(){
         s_ntt.append(array_from_span(ntt_kyber(poly.span())));
     }
-    for poly in e{
+    for poly in e.span(){
         e_ntt.append(array_from_span(ntt_kyber(poly.span())));
     }
 
@@ -140,6 +134,28 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     key_pair.ek_len = key_pair.ek.len().try_into().unwrap();
     key_pair.dk_len = key_pair.dk.len().try_into().unwrap();
     print!("Kpke KeyGen End eklength: {} dk length: {}\n", key_pair.ek_len, key_pair.dk_len);
+    // if there is a bug, print out Ahat, s, e, tHat, rho and sigma
+    println!("Debug info:");
+    println!("Rho:");
+    print_u8_span_hex(rho_span);
+    println!("Sigma:");
+    print_u8_span_hex(sigma.span());
+        println!("Ahat:");
+    for poly in Ahat{
+        print_u16_span_dec(poly.span());
+    }
+    println!("s:");
+    for poly in s.span(){
+        print_u16_span_dec(poly.span());
+    }
+    println!("e:");
+    for poly in e.span(){
+        print_u16_span_dec(poly.span());
+    }
+    println!("tHat:");
+    for poly in tHat.span(){
+        print_u16_span_dec(poly.span());
+    }
     key_pair
 }
 
@@ -193,9 +209,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
 
     // sample e2, as a single vector
     println!("Generating e2 vector\n");
-    let e2 : Array<u16> = sample_poly_cbd(prfEta(eta, r, big_n), eta);
-    
-
+    let e2 : Array<u16> = sample_poly_cbd(prfEta(eta, r, big_n).span(), eta);
 
     // compute yhat - ntt of y
     i = 0;
@@ -389,13 +403,14 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
 pub fn generate_vector( k : usize, sigma : Span<u8>, eta : usize, mut big_n : u8) -> ( Array<Array<u16>>, u8 ){
     let mut v : Array<Array<u16>> = ArrayTrait::new();
     let mut i : u8= 0;
+    print!("Generating vector with {} polynomials\n", k);
     while i < k.try_into().unwrap(){
-        v.append(
-            sample_poly_cbd(prfEta(eta, sigma, big_n),
-            eta.try_into().unwrap())
-        );
+        let val = sample_poly_cbd(prfEta(eta, sigma, big_n).span(), eta.try_into().unwrap());
+        print_u16_span_dec(val.span());
+        v.append(val);
         i += 1;
         big_n += 1;
+        print!("Polynomial {} generated\n", i);
     }
     (v , big_n) 
 }
@@ -410,7 +425,8 @@ pub fn generate_matrix( k : usize, mut rho : Array<u8>) -> Array<Array<u16>>{
             let mut seed = rho.clone();
             seed.append(j);
             seed.append(i);
-            Ahat.append(sample_ntt(seed.span()));
+            let val = sample_ntt(seed.span());
+            Ahat.append(val);
             j += 1;
         }
         i += 1;

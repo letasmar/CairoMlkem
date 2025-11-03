@@ -29,7 +29,7 @@ pub fn mlkem_key_gen_512_impl() -> keys{
     let dkpke = kpkeKeys.dk.span();
 
     // hex is sha3-256(ekpke), H function
-    let hek = H(ekpke.clone());
+    let hek = H(ekpke);
     let dkpke_ekpke = concat_arrays(dkpke, ekpke);
     let tmp2 = concat_arrays(dkpke_ekpke, hek.span());
 
@@ -38,12 +38,6 @@ pub fn mlkem_key_gen_512_impl() -> keys{
     k.dk = array_from_span(concat_arrays(tmp2, z));
     k.ek_len = MLKEM512_ENCAPS_K.try_into().unwrap();
     k.dk_len = MLKEM512_DECAPS_K.try_into().unwrap();
-    // print!("Encapsulation key should be length: {}\n", MLKEM512_ENCAPS_K);
-    // print!("Decapsulation key should be length: {}\n", MLKEM512_DECAPS_K);
-    // print!("K has public key length: {} and secret key length: {}\n", k.ek.len(), k.dk.len());
-    // print!("Struct says ek {} and dk {} bytes\n", k.ek_len, k.dk_len);
-    // k
-    // print!("K has public key length: {} and secret key length: {}\n", k.ek.len(), k.dk.len());
     k
 }
 
@@ -312,7 +306,7 @@ fn get_message512() -> Span<u8>{
 
 pub fn get_ek() -> Span<u8>{
     let mut arr : Array<u8> = ArrayTrait::new();
-    arr.append(0xf2);
+    {arr.append(0xf2);
     arr.append(0x9c);
     arr.append(0x86);
     arr.append(0x6c);
@@ -1111,13 +1105,13 @@ pub fn get_ek() -> Span<u8>{
     arr.append(0x62);
     arr.append(0xa3);
     arr.append(0x6e);
-    arr.append(0xb0);
+    arr.append(0xb0);}
     arr.span()
     }
 
     pub fn get_dk() -> Span<u8>{
         let mut arr = ArrayTrait::new();
-        arr.append(0x2d);
+    arr.append(0x2d);
     arr.append(0x17);
     arr.append(0xc4);
     arr.append(0xba);
@@ -2750,9 +2744,9 @@ pub fn get_ek() -> Span<u8>{
     arr.append(0x73);
     arr.append(0x10);
     arr.span()
-}
+    }
 
-pub fn get_cipher() -> Span<u8> {
+    pub fn get_cipher() -> Span<u8> {
     let mut arr : Array<u8> = ArrayTrait::new();
     arr.append(0x96);
     arr.append(0xc7);
