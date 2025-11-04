@@ -9,7 +9,7 @@ use crate::mlkem::{MLKEM_Q, MLKEM_Qu16};
 /// Takes a 32-byte seed and two indices as input and outputs a pseudorandom element of 𝑇𝑞.
 /// Output should be coefficients of the ntt of a polynomial in Z_q
 pub fn sample_ntt(bytes: Span<u8>) -> Array<u16> {
-    print!("Running sample_ntt\n");
+    // print!("Running sample_ntt\n");
     let mut ctx : SpongeContext = keccak_sponge_init_context(SHAKE128_RATE_BYTES, SHAKE128_DOMAIN);
     ctx = kecak_sponge_absorb(ctx, bytes);
     
@@ -41,13 +41,13 @@ pub fn sample_ntt(bytes: Span<u8>) -> Array<u16> {
             j += 1;
         }
     }
-    print!("Finished sample_ntt\n");
+    // print!("Finished sample_ntt\n");
     aHat
 }
 
 ///Takes a seed as input and outputs a pseudorandom sample from the distribution D𝜂(𝑅𝑞).
 pub fn sample_poly_cbd(bytes: Span<u8>, eta: usize) -> Array<u16> {
-    print!("Running sample_poly_cbd\n");
+    // print!("Running sample_poly_cbd\n");
     if( eta != 2 && eta != 3){
         panic!("Invalid eta value")
     }
@@ -80,6 +80,6 @@ pub fn sample_poly_cbd(bytes: Span<u8>, eta: usize) -> Array<u16> {
         f.append((x + MLKEM_Qu16 - y) % MLKEM_Qu16);
         i += 1;
     }
-    print!("Finished sample_poly_cbd\n");
+    // print!("Finished sample_poly_cbd\n");
     f
 }

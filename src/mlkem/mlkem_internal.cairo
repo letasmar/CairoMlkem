@@ -1,4 +1,5 @@
-use crate::mlkem::{MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV, MLKEM512_ENCAPS_K, MLKEM512_DECAPS_K};
+use crate::mlkem::{MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU,
+    MLKEM512_DV, MLKEM512_ENCAPS_K, MLKEM512_DECAPS_K, MLKEM512_CIPHER, MLKEM_SHARED_KEY_LEN};
 use crate::mlkem::keys;
 use crate::mlkem::keyCipher;
 use crate::mlkem::keys_init;
@@ -62,24 +63,24 @@ pub fn mlkem_encaps_512_impl( ek : Span<u8> ) -> keyCipher{
     // r last 10 bytes: 6d c1 f5 fd f8 f 2d a0 1c a7 
     
     // the following code is split into segments for clarity
-    let ek_array = ek.clone();
-    let hek = H(ek_array);
-    let m_hek = concat_arrays(m, hek.span());
+    // let ek_array = ek.clone();
+    // let hek = H(ek_array);
+    // let m_hek = concat_arrays(m, hek.span());
     
-    let ek_slice = ek.slice(ek.len() - 10, 10);
-    print!("ek last 10 bytes: ");
-    for byte in ek_slice{
-        print!(" {:x}", *byte);
-    }
-    print!("\n");
+    // let ek_slice = ek.slice(ek.len() - 10, 10);
+    // print!("ek last 10 bytes: ");
+    // for byte in ek_slice{
+    //     print!(" {:x}", *byte);
+    // }
+    // print!("\n");
 
-    let hek_span = hek.span();
-    let hek_slice = hek_span.slice(hek_span.len() - 10, 10);
-    print!("hek last 10 bytes: ");
-    for byte in hek_slice{
-        print!(" {:x}", *byte);
-    }
-    print!("\n");
+    // let hek_span = hek.span();
+    // let hek_slice = hek_span.slice(hek_span.len() - 10, 10);
+    // print!("hek last 10 bytes: ");
+    // for byte in hek_slice{
+    //     print!(" {:x}", *byte);
+    // }
+    // print!("\n");
 
     // derive shared key K and randomness r
     let (K, r ) = G(concat_arrays(m, H(ek).span()));
@@ -87,11 +88,11 @@ pub fn mlkem_encaps_512_impl( ek : Span<u8> ) -> keyCipher{
     // print last ten bytes of r
     let r_span = r.span();
     let r_slice = r_span.slice(r_span.len() - 10, 10);
-    print!("r last 10 bytes: ");
-    for byte in r_slice{
-        print!(" {:x}", *byte);
-    }
-    print!("\n");
+    // print!("r last 10 bytes: ");
+    // for byte in r_slice{
+    //     print!(" {:x}", *byte);
+    // }
+    // print!("\n");
 
     // panic!("Stopping after printing last 10 bytes of r");
 
@@ -99,9 +100,11 @@ pub fn mlkem_encaps_512_impl( ek : Span<u8> ) -> keyCipher{
     let mut kc : keyCipher = keyCipher_init();
     kc.key = K;
     kc.c = c;
+    kc.k_len = MLKEM_SHARED_KEY_LEN.try_into().unwrap();
+    kc.c_len = MLKEM512_CIPHER.try_into().unwrap();
     // print!("Ciphertext should be length: {}\n", MLKEM512_CIPHER);
-    print!("KeyCipher has key length: {} and ciphertext length: {}\n", kc.key.len(), kc.c.len());
-    print!("Struct says k_len {} and c_len {} bytes\n", kc.k_len, kc.c_len);
+    // print!("KeyCipher has key length: {} and ciphertext length: {}\n", kc.key.len(), kc.c.len());
+    // print!("Struct says k_len {} and c_len {} bytes\n", kc.k_len, kc.c_len);
     kc
 }
 

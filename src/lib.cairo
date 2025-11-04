@@ -29,7 +29,8 @@ fn main(){
 //         i += 1;
 //     }
 //     print!("All iterations completed successfully\n");
-    test_keygen();
+    // test_keygen();
+    test_encaps();
     // test_decaps()
     // let mut a : Array<u8> = ArrayTrait::new();
     // a = append_n_zeroes(a, 10, 0_u8);
@@ -186,9 +187,10 @@ fn test_encaps(){
     println!("Starting encapsulation test");
     let cipher = mlkem::mlkem_encaps_512(get_ek());
     assert!(cipher.c.len() == mlkem::MLKEM512_CIPHER);
-    let k = 32;
+    let k = mlkem::MLKEM512_CIPHER;
     println!("Ciphertext last {} bytes:", k);
-    print_last_k_bytes(cipher.c.span(), k);
+    // print_last_k_bytes(cipher.c.span(), k);
+    print_u8_array(cipher.c.span());
     panic!("Encapsulation test passed");
 }
 
