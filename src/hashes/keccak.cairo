@@ -1,18 +1,33 @@
 use crate::utils::from_u8Array_to_WordArray_Le;
 use crate::utils::from_WordArray_to_u8array_Le;
 use crate::utils::set_array_at;
+use crate::utils::append_n_zeroes;
 use crate::utils::{Word64, Word64WordOperations};
 use crate::hashes::SpongeContext;
 
+/// Keccak sponge hash function
+/// # Arguments
+/// * `input` - Input data as a Span<u8>
+/// * `rate_bytes` - Rate in bytes
+/// * `domain` - Domain separation byte
+/// * `out_len` - Desired output length in bytes
+/// # Returns
+/// * `Array<u8>` - Output hash as an Array<u8>
 pub fn keccak_sponge_hash(input: Span<u8>, rate_bytes : usize, domain : u8, out_len: usize) -> Array<u8> {
     let mut ctx = keccak_sponge_init_context(rate_bytes, domain);
     // Absorb phase
-    ctx = kecak_sponge_absorb( ctx, input);
+    ctx = keccak_sponge_absorb( ctx, input);
     // Squeeze phase
     let (_ctx, output) = keccak_sponge_squeeze(ctx, out_len);
     output
 }
 
+/// Keccak sponge squeeze function
+/// # Arguments
+/// * `ctx` - Sponge context after absorption
+/// * `out_len` - Desired output length in bytes
+/// # Returns
+/// * `(SpongeContext, Array<u8>)` - Updated context and output data
 pub fn keccak_sponge_squeeze(mut ctx: SpongeContext, out_len: usize) -> (SpongeContext, Array<u8>){
     let mut output = ArrayTrait::new();
     let mut output_remaining = out_len;
@@ -20,9 +35,11 @@ pub fn keccak_sponge_squeeze(mut ctx: SpongeContext, out_len: usize) -> (SpongeC
     let mut block_size = 0;
     let rate_bytes = ctx.rate_bytes;
     let mut state = ctx.state;
-    
+    let piln = get_keccak_piln();
+    let rotc = get_keccak_rot();
+    let rndc = get_keccak_rndc();
     while output_remaining > 0 {
-        // Calculate output block size
+        // Calculate output block size as a minimum of rate_bytes and output_remaining
         if output_remaining < rate_bytes {
             block_size = output_remaining;
         } else {
@@ -41,7 +58,7 @@ pub fn keccak_sponge_squeeze(mut ctx: SpongeContext, out_len: usize) -> (SpongeC
         
         // If more output needed, apply permutation
         if output_remaining > 0 {
-            state = keccak_f_state_permute(state.span());
+            state = keccak_f_state_permute(state.span(), piln, rotc, rndc);
             output_pos = 0;
         }
     }
@@ -50,14 +67,15 @@ pub fn keccak_sponge_squeeze(mut ctx: SpongeContext, out_len: usize) -> (SpongeC
     (ctx, output)
 }
 
+/// Initializes the Keccak sponge context
+/// # Arguments
+/// * `rate_bytes` - Rate in bytes
+/// * `domain` - Domain separation byte
+/// # Returns
+/// * `SpongeContext` - Initialized sponge context with zeroed state
 pub fn keccak_sponge_init_context(rate_bytes: usize, domain: u8) -> SpongeContext {
     let mut state: Array<u8> = ArrayTrait::new();
-    
-    let mut i: usize = 0;
-    while i < 200 {
-        state.append(0);
-        i += 1;
-    }
+    state = append_n_zeroes(state, 200, 0_u8);
     
     SpongeContext {
         state: state,
@@ -66,14 +84,22 @@ pub fn keccak_sponge_init_context(rate_bytes: usize, domain: u8) -> SpongeContex
     }
 }
 
-pub fn kecak_sponge_absorb(mut ctx: SpongeContext, input: Span<u8>) -> SpongeContext{
+/// Keccak sponge absorb function
+/// # Arguments
+/// * `ctx` - Sponge context
+/// * `input` - Input data as a Span<u8>
+/// # Returns
+/// * `SpongeContext` - Updated sponge context after absorption
+pub fn keccak_sponge_absorb(mut ctx: SpongeContext, input: Span<u8>) -> SpongeContext{
     let rate_bytes = ctx.rate_bytes;
     let mut state = ctx.state;
     let domain = ctx.domain;
     let mut input_pos: usize = 0;
     let input_len = input.len();
     let mut block_size: usize = 0;
-    
+    let piln = get_keccak_piln();
+    let rotc = get_keccak_rot();
+    let rndc = get_keccak_rndc();
     // Absorb phase
     while input_pos < input_len {
         // Calculate block size
@@ -97,7 +123,7 @@ pub fn kecak_sponge_absorb(mut ctx: SpongeContext, input: Span<u8>) -> SpongeCon
         
         // If block is complete, apply permutation
         if block_size == rate_bytes {
-            state = keccak_f_state_permute(state.span());
+            state = keccak_f_state_permute(state.span(), piln, rotc, rndc);
         }
     }
     
@@ -111,7 +137,7 @@ pub fn kecak_sponge_absorb(mut ctx: SpongeContext, input: Span<u8>) -> SpongeCon
     
     // Check if we need extra block for padding
     if (domain & 0x80) != 0 && current_pos == (rate_bytes - 1) {
-        state = keccak_f_state_permute(state.span());
+        state = keccak_f_state_permute(state.span(), piln, rotc, rndc);
     }
     
     // Add final padding bit
@@ -120,22 +146,19 @@ pub fn kecak_sponge_absorb(mut ctx: SpongeContext, input: Span<u8>) -> SpongeCon
     state = set_array_at(state, last_pos, last_val ^ 0x80);
     
     // Final permutation
-    state = keccak_f_state_permute(state.span());
+    state = keccak_f_state_permute(state.span(), piln, rotc, rndc);
     let mut res = keccak_sponge_init_context(rate_bytes, domain);
     res.state = state;
     res
 }
 
-pub fn keccak_f_state_permute(state : Span<u8>) -> Array<u8>{
+pub fn keccak_f_state_permute(state : Span<u8>, piln : Span<Word64>, rotc : Span<Word64>, rndc : Span<Word64>) -> Array<u8>{
     let mut tmp = from_u8Array_to_WordArray_Le(state);
-    let mut tmp2 = keccak_f(tmp);
+    let mut tmp2 = keccak_f(tmp, piln, rotc, rndc);
     from_WordArray_to_u8array_Le(tmp2.span())
 }
 
-fn keccak_f(mut s: Array<Word64> ) -> Array<Word64>{
-    let piln = get_keccak_piln().span();
-    let rotc = get_keccak_rot().span();
-    let rndc = get_keccak_rndc().span();
+fn keccak_f(mut s: Array<Word64> , piln : Span<Word64>, rotc : Span<Word64>, rndc : Span<Word64>) -> Array<Word64>{
 
     let mut round = 0;
     while round < 24{
@@ -201,7 +224,7 @@ fn keccak_f(mut s: Array<Word64> ) -> Array<Word64>{
 }
 
 // Return the rotation constants
-fn get_keccak_rot() -> Array<Word64> {
+fn get_keccak_rot() -> Span<Word64> {
     let mut rot: Array<Word64> = ArrayTrait::new();
     rot.append(Word64 { data: 0x01 });
     rot.append(Word64 { data: 0x03 });
@@ -228,11 +251,11 @@ fn get_keccak_rot() -> Array<Word64> {
     rot.append(Word64 { data: 0x14 });
     rot.append(Word64 { data: 0x2C });
     rot.append(Word64 { data: 0x3C });
-    rot
+    rot.span()
 }
 
 // Return the Pi Lane indices
-fn get_keccak_piln() -> Array<Word64> {
+fn get_keccak_piln() -> Span<Word64> {
     let mut piln: Array<Word64> = ArrayTrait::new();
     piln.append(Word64 { data: 10 });
     piln.append(Word64 { data: 7 });
@@ -258,11 +281,11 @@ fn get_keccak_piln() -> Array<Word64> {
     piln.append(Word64 { data: 9 });
     piln.append(Word64 { data: 6 });
     piln.append(Word64 { data: 1 });
-    piln
+    piln.span()
 }
 
 // Returns the Keccak round constants
-fn get_keccak_rndc() -> Array<Word64> {
+fn get_keccak_rndc() -> Span<Word64> {
     let mut rndc: Array<Word64> = ArrayTrait::new();
     rndc.append(Word64 { data: 0x0000000000000001 });
     rndc.append(Word64 { data: 0x0000000000008082 });
@@ -288,5 +311,5 @@ fn get_keccak_rndc() -> Array<Word64> {
     rndc.append(Word64 { data: 0x8000000000008080 });
     rndc.append(Word64 { data: 0x0000000080000001 });
     rndc.append(Word64 { data: 0x8000000080008008 });
-    rndc
+    rndc.span()
 }

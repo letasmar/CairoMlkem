@@ -15,6 +15,13 @@ pub const SHAKE256_DOMAIN: u8 = 0x1F;
 use keccak::keccak_sponge_hash;
 use crate::utils::concat_arrays;
 
+#[derive(Drop, Clone)]
+pub struct SpongeContext {
+    state: Array<u8>,
+    rate_bytes: usize,
+    domain: u8,
+}
+
 // ----------------------------
 // Public Hash Functions
 // ----------------------------
@@ -83,12 +90,4 @@ pub fn G(input: Span<u8>) -> (Array<u8>, Array<u8>){
         i += 1;
     }
     (out1, out2)
-}
-
-
-#[derive(Drop, Clone)]
-pub struct SpongeContext {
-    state: Array<u8>,
-    rate_bytes: usize,
-    domain: u8,
 }

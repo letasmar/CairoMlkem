@@ -1,7 +1,7 @@
 use crate::hashes::{SpongeContext, SHAKE128_DOMAIN, SHAKE128_RATE_BYTES};
 use crate::hashes::keccak::keccak_sponge_init_context;
 use crate::hashes::keccak::keccak_sponge_squeeze;
-use crate::hashes::keccak::kecak_sponge_absorb;
+use crate::hashes::keccak::keccak_sponge_absorb;
 use crate::utils::bytes_to_bits;
 use crate::mlkem::{MLKEM_Q, MLKEM_Qu16};
 
@@ -11,7 +11,7 @@ use crate::mlkem::{MLKEM_Q, MLKEM_Qu16};
 pub fn sample_ntt(bytes: Span<u8>) -> Array<u16> {
     // print!("Running sample_ntt\n");
     let mut ctx : SpongeContext = keccak_sponge_init_context(SHAKE128_RATE_BYTES, SHAKE128_DOMAIN);
-    ctx = kecak_sponge_absorb(ctx, bytes);
+    ctx = keccak_sponge_absorb(ctx, bytes);
     
     let want_bytes : usize = 3 * 512;
     let (ctx, mut c) = keccak_sponge_squeeze(ctx, want_bytes);
