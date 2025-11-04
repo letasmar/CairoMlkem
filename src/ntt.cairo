@@ -1,7 +1,6 @@
-use crate::ntt_constants::{get_zeta, get_zeta2, MLKEM_Q_INVN};
-use crate::zq::{add_mod, mul3_mod, mul_mod, sub_mod, mul_mod_signed};
+use crate::constants::{get_zeta, get_zeta2, MLKEM_Q_INVN};
+use crate::zq::{add_mod, mul_mod, sub_mod, mul_mod_signed};
 use crate::utils::{array_from_span, set_array_at};
-use crate::mlkem::MLKEM_Q;
 
 
 // Compute the NTT of a polynomial in Kyber parameters
