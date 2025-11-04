@@ -315,7 +315,7 @@ fn math_shr_precomputed<T, +Div<T>, +Rem<T>, +Drop<T>, +Copy<T>, +Into<T, u128>>
 
 // end of Alexandria package
 
-// Converts an array of MSB bits to a Array of bytes(u8)
+/// Converts an array of MSB bits to a Array of bytes(u8)
 pub fn bits_to_bytes(bits: Span<u8>) -> Array<u8> {
     if(bits.len() % 8 != 0){
         panic!("alignment issues");
@@ -451,6 +451,7 @@ pub fn decompress(input: Span<u16>, d : usize) -> Array<u16>{
     output
 }
 
+/// concatenates two spans into one span
 pub fn concat_arrays<T, +Copy<T>, +Drop<T>>(a: Span<T>, b: Span<T>) -> Span<T> {
     let mut result: Array<T> = ArrayTrait::new();
     let mut i = 0;
@@ -466,6 +467,7 @@ pub fn concat_arrays<T, +Copy<T>, +Drop<T>>(a: Span<T>, b: Span<T>) -> Span<T> {
     result.span()
 }
 
+/// converts a span into an array
 pub fn array_from_span<T, +Copy<T>, +Drop<T>>(span: Span<T>) -> Array<T> {
     let mut result: Array<T> = ArrayTrait::new();
     let mut i = 0;
@@ -476,13 +478,8 @@ pub fn array_from_span<T, +Copy<T>, +Drop<T>>(span: Span<T>) -> Array<T> {
     result
 }
 
+/// appends n zeroes to an array
 pub fn append_n_zeroes<T, +Copy<T>, +Drop<T>>(mut arr: Array<T>, n: usize, zero: T) -> Array<T> {
-    // let mut result: Array<T> = ArrayTrait::new();
-    // let mut i = 0;
-    // while i < arr.len() {
-    //     result.append(*arr.at(i));
-    //     i += 1;
-    // }
     let mut i = 0;
     while i < n {
         arr.append(zero);
@@ -491,6 +488,7 @@ pub fn append_n_zeroes<T, +Copy<T>, +Drop<T>>(mut arr: Array<T>, n: usize, zero:
     arr
 }
 
+/// sets modulus based on d value, for 1 <= d <= 12, if d = 12, modulus is MLKEM_Qu16
 fn set_modulus( d: usize) -> u16{
     let mut m : u16 = 0;
     match d{
@@ -511,19 +509,6 @@ fn set_modulus( d: usize) -> u16{
     }
     m
 }
-
-pub fn pow(base: u8, exponent: u32) -> u8 {
-    let mut result: u8 = 1;
-    let mut i: u32 = 0;
-
-    while i < exponent {
-        result = result * base;
-        i += 1;
-    }
-
-    result
-}
-
 
 // for use in loops, expensive
 // Powers of two to avoid recomputing, save in function
@@ -550,6 +535,7 @@ pub fn get_powers_2() -> Span<u64> {
     power_2.span()
 }
 
+// for debugging
 pub fn print_u8_span_hex(arr: Span<u8>) -> () {
     for i in 0..arr.len() {
         println!("arr.append(0x{:x});", *arr.at(i));
