@@ -17,7 +17,7 @@ use crate::utils::compress;
 use crate::utils::concat_arrays;
 use crate::utils::print_u16_span_dec;
 use crate::utils::print_u8_span_hex;
-use crate::mlkem::MLKEM_ETA;
+use crate::constants::MLKEM_ETA;
 
 /// d is random seed of 32 bytes, others are mlkem parameters
 /// keys struct contains ek and dk as u8 arrays

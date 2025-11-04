@@ -1,4 +1,4 @@
-use crate::mlkem::{MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU,
+use crate::constants::{MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU,
     MLKEM512_DV, MLKEM512_ENCAPS_K, MLKEM512_DECAPS_K, MLKEM512_CIPHER, MLKEM_SHARED_KEY_LEN};
 use crate::mlkem::keys;
 use crate::mlkem::keyCipher;

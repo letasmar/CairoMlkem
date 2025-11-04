@@ -4,7 +4,7 @@
 // Variable naming is compliant to RFC-6234 (https://datatracker.ietf.org/doc/html/rfc6234)
 
 use crate::opt_math::{OptBitShift, OptWrapping};
-use crate::mlkem::{MLKEM_Qu16, MLKEM_Q};
+use crate::constants::{MLKEM_Qu16, MLKEM_Q};
 use core::num::traits::{Bounded, WrappingAdd};
 use core::traits::{BitAnd, BitOr, BitXor, BitNot};
 

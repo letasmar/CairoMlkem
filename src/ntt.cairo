@@ -39,7 +39,7 @@ pub fn ntt_kyber(mut f : Span<u16>) -> Span<u16> {
 
 pub fn ntt_kyber_inv(mut fHat : Span<u16>) -> Span<u16> {
 
-    print!("Computing Inverse NTT Kyber========\n");
+    // print!("Computing Inverse NTT Kyber========\n");
     let mut f = array_from_span(fHat);
     let mut i : usize = 127;
     let zeta = get_zeta();
@@ -67,15 +67,13 @@ pub fn ntt_kyber_inv(mut fHat : Span<u16>) -> Span<u16> {
 
         len = len * 2;
     }
-    print!("Multiplying by n^-1\n");
     // multiply by n^-1
     let n_inv = MLKEM_Q_INVN;
     let mut f_mul : Array<u16> = ArrayTrait::new();
     for val in @f{
         f_mul.append(mul_mod(*val, n_inv));
     }
-    print!("==================Completed Inverse NTT Kyber\n");
-
+    // print!("==================Completed Inverse NTT Kyber\n");
     f_mul.span()
 }
 

@@ -1,35 +1,6 @@
 pub mod mlkem_internal;
 pub mod kpke;
 
-// parameters for MLKEM
-pub const MLKEM_Q: usize = 3329;
-pub const MLKEM_Qu16: u16 = 3329;
-pub const MLKEM_N: usize = 256;
-pub const MLKEM512_ETA1 : usize = 3; // generating s,e in KeyGen, y in Encrypt
-pub const MLKEM_ETA : usize = 2; // all other etas
-pub const MLKEM512_K: usize = 2;
-pub const MLKEM768_K: usize = 3;
-pub const MLKEM1024_K: usize = 4;
-
-pub const MLKEM512_DV: usize = 4;
-pub const MLKEM768_DV: usize = 4;
-pub const MLKEM1024_DV: usize = 5;
-pub const MLKEM512_DU: usize = 10;
-pub const MLKEM768_DU: usize = 10;
-pub const MLKEM1024_DU: usize = 11;
-
-// lengths for keys
-pub const MLKEM_SHARED_KEY_LEN : usize = 32;
-pub const MLKEM512_ENCAPS_K: usize = 800;
-pub const MLKEM768_ENCAPS_K: usize = 1184;
-pub const MLKEM1024_ENCAPS_K: usize = 1568;
-pub const MLKEM512_DECAPS_K: usize = 1632;
-pub const MLKEM768_DECAPS_K: usize = 2400;
-pub const MLKEM1024_DECAPS_K: usize = 3168;
-pub const MLKEM512_CIPHER: usize = 768;
-pub const MLKEM768_CIPHER: usize = 1088;
-pub const MLKEM1024_CIPHER: usize = 1568;
-
 /// kem512 verify lengths ek: 800, dk: 1632
 /// kem768 verify lengths ek: 1184, dk: 2400
 /// kem1024 verify lengths ek: 1568, dk: 3168
