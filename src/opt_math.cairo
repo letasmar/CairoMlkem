@@ -1,3 +1,7 @@
+//! from Alexandria Cairo library
+//! accessed Oct 29, 2025
+//! url: https://github.com/keep-starknet-strange/alexandria/tree/main/packages/math/src/opt_math.cairo
+
 use core::num::traits::WideMul;
 use crate::wrapping_math::WrappingMath;
 /// Runtime optimized math utils (n steps / gas)

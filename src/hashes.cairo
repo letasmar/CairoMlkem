@@ -22,6 +22,9 @@ pub struct SpongeContext {
     domain: u8,
 }
 
+
+//! https://github.com/weidai11/cryptopp/blob/master/sha3.cpp#L26
+//! https://github.com/brainhub/SHA3IUF/tree/master
 // ----------------------------
 // Public Hash Functions
 // ----------------------------

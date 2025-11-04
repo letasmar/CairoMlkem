@@ -1,3 +1,7 @@
+//! Alexandria Cairo library - math module
+//! accessed Oct 29, 2025
+//! url: https://github.com/keep-starknet-strange/alexandria/blob/main/packages/math/src/lib.cairo
+
 pub use core::num::traits::{
     Bounded, OverflowingMul, WideMul, WrappingAdd, WrappingMul, WrappingSub,
 };

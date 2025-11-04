@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2025 StarkWare Industries Ltd.
 //
 // SPDX-License-Identifier: MIT
-
-//! Operations on the base ring Z_q
-// Q value change from 12289 to 3329, similarly inverses in ntt were substituted
+//! accessed Oct 29, 2025
+//! url: https://github.com/starkware-bitcoin/s2morrow/blob/master/packages/falcon/src/zq.cairo
+//! the following code has been modified to change the modulus Q from 12289 to 3329:
 
 use core::num::traits::CheckedAdd;
 

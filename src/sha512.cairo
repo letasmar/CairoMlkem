@@ -1,3 +1,8 @@
+//! SHA-512 implementation from Alexandria Cairo library
+//! accessed Oct 29, 2025
+//! url: https://github.com/keep-starknet-strange/alexandria/blob/main/packages/math/src/sha512.cairo
+
+
 use crate::opt_math::{OptBitShift, OptWrapping};
 use core::num::traits::{Bounded, WrappingAdd};
 use core::traits::{BitAnd, BitOr, BitXor, BitNot};
