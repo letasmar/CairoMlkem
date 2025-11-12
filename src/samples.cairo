@@ -20,8 +20,6 @@ pub fn sample_ntt(bytes: Span<u8>) -> Array<u16> {
     let mut idx : usize = 0;
     let mut aHat : Array<u16> = ArrayTrait::new();
 
-
-    // print!("initialized variables. Onto the loop\n");
     while j < 256_usize && idx + 3 <= want_bytes {
         // let (ctx, mut c) = keccak_sponge_squeeze(ctx, 3); // this could be just made easier by grabbing say 3 * 512 bytes
         let c0 : u16 = c.pop_front().unwrap().into();

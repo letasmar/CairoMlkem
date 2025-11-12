@@ -31,14 +31,14 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     // G is SHA3-512
     let (rho, sigma ) = G(d.clone());
     let rho_span = rho.span();
-    print!("Rho length: {}, Sigma length: {}\n", rho.len(), sigma.len());
+    // print!("Rho length: {}, Sigma length: {}\n", rho.len(), sigma.len());
     let mut big_n0 : u8 = 0;
     let mut i : u8 = 0;
     // generate matrix Ahat
     let mut Ahat : Array<Array<u16>> = generate_matrix(k, rho.clone());
 
     // print Ahat size
-    println!("Ahat has {} rows", Ahat.len());
+    // println!("Ahat has {} rows", Ahat.len());
     // println!("Each row has {} columns", Ahat.at(0).len());
 
     // generate s vector 
@@ -46,13 +46,13 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
 
 
     //print s size
-    println!("s has {} polynomials", s.len());
+    // println!("s has {} polynomials", s.len());
     // println!("Each polynomial has {} coefficients", s.at(0).len());
 
     // generate e vector
     let (mut e, mut big_n2) = generate_vector( k, sigma.span(), eta, big_n1);
     // print e size
-    println!("e has {} polynomials", e.len());
+    // println!("e has {} polynomials", e.len());
     // println!("Each polynomial has {} coefficients", e.at(0).len());
 
     // run ntt on s and e each coordinate
@@ -65,7 +65,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
         e_ntt.append(array_from_span(ntt_kyber(poly.span())));
     }
 
-    print!("s_ntt and e_ntt computed\n");
+    // print!("s_ntt and e_ntt computed\n");
 
     // declare tHat
     let mut tHat : Array<Array<u16>> = ArrayTrait::new();
@@ -75,7 +75,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     while i < k.try_into().unwrap(){
         // acc = tHat[i]
         let mut acc: Array<u16> = ArrayTrait::new(); 
-        print!("Computing tHat polynomial {}\n", i);
+        // print!("Computing tHat polynomial {}\n", i);
         acc = append_n_zeroes(acc, 256, 0);
 
         let mut j : usize = 0;
@@ -110,7 +110,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
         i += 1;
     }
     // print tHat size
-    println!("tHat has {} polynomials", tHat.len());
+    // println!("tHat has {} polynomials", tHat.len());
     // println!("Each polynomial has {} coefficients", tHat.at(0).len());
 
 
@@ -140,29 +140,29 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     
     key_pair.ek_len = key_pair.ek.len().try_into().unwrap();
     key_pair.dk_len = key_pair.dk.len().try_into().unwrap();
-    print!("Kpke KeyGen End eklength: {} dk length: {}\n", key_pair.ek_len, key_pair.dk_len);
+    // print!("Kpke KeyGen End eklength: {} dk length: {}\n", key_pair.ek_len, key_pair.dk_len);
     // if there is a bug, print out Ahat, s, e, tHat, rho and sigma
-    println!("Debug info:");
-    println!("Rho:");
-    print_u8_span_hex(rho_span);
-    println!("Sigma:");
-    print_u8_span_hex(sigma.span());
-        println!("Ahat:");
-    for poly in Ahat{
-        print_u16_span_dec(poly.span());
-    }
-    println!("s:");
-    for poly in s.span(){
-        print_u16_span_dec(poly.span());
-    }
-    println!("e:");
-    for poly in e.span(){
-        print_u16_span_dec(poly.span());
-    }
-    println!("tHat:");
-    for poly in tHat.span(){
-        print_u16_span_dec(poly.span());
-    }
+    // println!("Debug info:");
+    // println!("Rho:");
+    // print_u8_span_hex(rho_span);
+    // println!("Sigma:");
+    // print_u8_span_hex(sigma.span());
+    //     println!("Ahat:");
+    // for poly in Ahat{
+    //     print_u16_span_dec(poly.span());
+    // }
+    // println!("s:");
+    // for poly in s.span(){
+    //     print_u16_span_dec(poly.span());
+    // }
+    // println!("e:");
+    // for poly in e.span(){
+    //     print_u16_span_dec(poly.span());
+    // }
+    // println!("tHat:");
+    // for poly in tHat.span(){
+    //     print_u16_span_dec(poly.span());
+    // }
     key_pair
 }
 
@@ -175,7 +175,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
 pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, eta : usize, du : usize, dv: usize) -> Array<u8>{
     let mut big_n : u8 = 0;
     let mut eta2 : usize = MLKEM_ETA; // eta2 is same for all variants
-    print!("Running kpke_encrypt\n");
+    // print!("Running kpke_encrypt\n");
     // run bytedecode_12 k times to decode tHat and obtain rho from last 32 bytes of ek
     let mut i :usize = 0;
     let mut tHat : Array<Array<u16>> = ArrayTrait::new();
@@ -370,7 +370,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
 }
 
 pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: usize, dv: usize) -> Array<u8> {
-    print!("Running kpke_decrypt\n");
+    // print!("Running kpke_decrypt\n");
     // get c_1 and c_2 from cipher
     let c1 = cipher.slice(0, 32 * k * du);
     let c2 = cipher.slice(32 * k * du, cipher.len() - (32 * k * du));
@@ -379,7 +379,7 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
     let c2_bytes : usize = ((dv * 256  + 7) / 8);
 
     // reconstruct uHat from c1
-    print!("Reconstructing uHat from c1\n");
+    // print!("Reconstructing uHat from c1\n");
     let mut uHat : Array<Array<u16>> = ArrayTrait::new();
     let mut i : usize = 0;
     while i < k {
@@ -391,21 +391,21 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
         i += 1;
     }
     //print uHat 
-    for uHat_i in uHat.span() {
-        println!("uHat: ");
-        for byte in uHat_i {
-            println!("arr.append({:x});", *byte);
-        }
-    }
+    // for uHat_i in uHat.span() {
+    //     println!("uHat: ");
+    //     for byte in uHat_i {
+    //         println!("arr.append({:x});", *byte);
+    //     }
+    // }
 
-    print!("reconstructing v from c2\n");
+    // print!("reconstructing v from c2\n");
     // reconstruct v from c2
     let decoded_v = byte_decode(c2, dv);
     let v = decompress(decoded_v.span(), dv);
 
     // print v
-    println!("v reconstructed (decaps):");
-    print_u16_span_dec(v.span());
+    // println!("v reconstructed (decaps):");
+    // print_u16_span_dec(v.span());
 
     let mut s_ntt : Array<Array<u16>> = ArrayTrait::new();
     let bytesPerPoly : usize = ((12 * 256 + 7) / 8);
@@ -418,15 +418,15 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
         i += 1;
     }
     // print s_ntt
-    for s_ntt_i in s_ntt.span() {
-        println!("s_ntt: ");
-        for byte in s_ntt_i {
-            println!("arr.append({:x});", *byte);
-        }
-    }
+    // for s_ntt_i in s_ntt.span() {
+    //     println!("s_ntt: ");
+    //     for byte in s_ntt_i {
+    //         println!("arr.append({:x});", *byte);
+    //     }
+    // }
 
-    // compute w
-    print!("Computing w\n");
+    // // compute w
+    // print!("Computing w\n");
     let mut w : Array<u16> = ArrayTrait::new();
 
     w = append_n_zeroes(w, 256, 0);
@@ -449,13 +449,13 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
     }
     // ntt inverse on w
     // print before computintg w inverse
-    println!("w before inverse(decaps):");
-    print_u16_span_dec(w.span());
-    print!("Computing w inverse\n");
+    // println!("w before inverse(decaps):");
+    // print_u16_span_dec(w.span());
+    // print!("Computing w inverse\n");
     let w_inv = ntt_kyber_inv(w.span());
     // print w_inv
-    println!("w_inv computed:\n");
-    print_u16_span_dec(w_inv);
+    // println!("w_inv computed:\n");
+    // print_u16_span_dec(w_inv);
     let mut final_w = ArrayTrait::new();
     i = 0;
     while i < 256{
@@ -464,7 +464,7 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
     }
     w = final_w;
     let compressed_w = compress(w.span(), 1);
-    print!("kpke_decrypt End\n");
+    // print!("kpke_decrypt End\n");
     byte_encode(compressed_w.span(), 1) 
 }
 

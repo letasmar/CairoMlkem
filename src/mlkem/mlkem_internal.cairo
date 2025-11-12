@@ -109,7 +109,7 @@ pub fn mlkem_encaps_512_impl( ek : Span<u8> ) -> keyCipher{
 }
 
 pub fn mlkem_decaps_512_impl( dk_span : Span<u8>, cipher : Span<u8> ) -> Array<u8>{
-    print!("Running mlkem_decaps_512_impl\n");
+    // print!("Running mlkem_decaps_512_impl\n");
     let dk_pke = dk_span.slice(0, 384 * MLKEM512_K);
     let ek_pke = dk_span.slice(384 * MLKEM512_K, MLKEM512_ENCAPS_K);
     let h = dk_span.slice(768 * MLKEM512_K, 32  );
@@ -117,16 +117,16 @@ pub fn mlkem_decaps_512_impl( dk_span : Span<u8>, cipher : Span<u8> ) -> Array<u
 
     let m = kpke::kpke_decrypt(dk_pke, cipher, MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
     // derive shared key K
-    println!("Deriving shared key K'");
+    // println!("Deriving shared key K'");
     // print K bytes
 
     let (K_prime, r_prime ) = G(concat_arrays(m.span(), H(ek_pke).span()));
-    println!("Derived K' with length: {}", K_prime.len());
+    // println!("Derived K' with length: {}", K_prime.len());
     for byte in K_prime.span(){
         println!(" {:x}", *byte);
     }
 
-    println!("Re-encrypting to verify ciphertext");
+    // println!("Re-encrypting to verify ciphertext");
     let c_prime = kpke::kpke_encrypt(ek_pke, m.span(), r_prime.span(), MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
 
     if(c_prime.len() != cipher.len()){
