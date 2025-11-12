@@ -33,7 +33,6 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     let rho_span = rho.span();
     // print!("Rho length: {}, Sigma length: {}\n", rho.len(), sigma.len());
     let mut big_n0 : u8 = 0;
-    let mut i : u8 = 0;
     // generate matrix Ahat
     let mut Ahat : Array<Array<u16>> = generate_matrix(k, rho.clone());
 
@@ -43,12 +42,11 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
 
     // generate s vector 
     let (mut s, mut big_n1) = generate_vector( k, sigma.span(), eta, big_n0);
-
-
+    
+    
     //print s size
-    // println!("s has {} polynomials", s.len());
     // println!("Each polynomial has {} coefficients", s.at(0).len());
-
+    
     // generate e vector
     let (mut e, mut big_n2) = generate_vector( k, sigma.span(), eta, big_n1);
     // print e size
@@ -71,8 +69,8 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     let mut tHat : Array<Array<u16>> = ArrayTrait::new();
     
     // compute t = As + e, first fill t with zeros
-    i = 0;
-    while i < k.try_into().unwrap(){
+    let mut i : usize = 0;
+    while i < k{
         // acc = tHat[i]
         let mut acc: Array<u16> = ArrayTrait::new(); 
         // print!("Computing tHat polynomial {}\n", i);
@@ -80,9 +78,9 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
 
         let mut j : usize = 0;
         while j < k {
-            let mut idx : usize = (i.into() * k + j).try_into().unwrap();
+            let mut idx : usize = (i * k + j);
             let product : Array<u16> = array_from_span(
-                multiply_ntt_kyber( Ahat[idx].span(), s_ntt[j.try_into().unwrap()].span())
+                multiply_ntt_kyber( Ahat[idx].span(), s_ntt[j].span())
             );
             let mut idx2 = 0;
             let mut tmp : Array<u16> = ArrayTrait::new();
@@ -92,6 +90,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
                 // acc = set_array_at(acc, idx2, sum);
                 idx2 += 1;
             }
+            acc = tmp;
             j += 1;
         }
 
@@ -99,7 +98,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
         let mut tmp2 : Array<u16> = ArrayTrait::new();
         while idx < 256{
             // tHat[i][idx] = add_mod(tHat[i][idx], e_ntt[i]);
-            let sum = add_mod(*acc.at(idx), *e_ntt.at(i.into()).at(idx));
+            let sum = add_mod(*acc.at(idx), *e_ntt.at(i).at(idx));
             // acc = set_array_at(acc, idx, sum);
             tmp2.append(sum);
             idx += 1;
@@ -141,22 +140,22 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     key_pair.ek_len = key_pair.ek.len().try_into().unwrap();
     key_pair.dk_len = key_pair.dk.len().try_into().unwrap();
     // print!("Kpke KeyGen End eklength: {} dk length: {}\n", key_pair.ek_len, key_pair.dk_len);
-    // if there is a bug, print out Ahat, s, e, tHat, rho and sigma
+    // // if there is a bug, print out Ahat, s, e, tHat, rho and sigma
     // println!("Debug info:");
     // println!("Rho:");
     // print_u8_span_hex(rho_span);
     // println!("Sigma:");
     // print_u8_span_hex(sigma.span());
-    //     println!("Ahat:");
+    // println!("Ahat:");
     // for poly in Ahat{
     //     print_u16_span_dec(poly.span());
     // }
-    // println!("s:");
-    // for poly in s.span(){
+    // println!("s_ntt:");
+    // for poly in s_ntt.span(){
     //     print_u16_span_dec(poly.span());
     // }
-    // println!("e:");
-    // for poly in e.span(){
+    // println!("e_ntt:");
+    // for poly in e_ntt.span(){
     //     print_u16_span_dec(poly.span());
     // }
     // println!("tHat:");
