@@ -431,7 +431,7 @@ pub fn compress(input: Span<u16>, d : usize) -> Array<u16>{
     output
 }
 
-/// converts from Z_(2^q) to Z_(2^q)
+/// converts from Z_(2^q) to Z_q
 pub fn decompress(input: Span<u16>, d : usize) -> Array<u16>{
     if( d >= 12 ){
         panic!("Wrong d value");
