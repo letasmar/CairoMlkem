@@ -1,4 +1,4 @@
-use crate::constants::{get_zeta, get_zeta2, MLKEM_Q_INVN};
+use crate::constants::{get_zeta, get_zeta2, MLKEM_Q_INVN, MLKEM_N};
 use crate::zq::{add_mod, mul_mod, sub_mod, mul_mod_signed};
 use crate::utils::{array_from_span, set_array_at};
 
@@ -8,12 +8,12 @@ pub fn ntt_kyber(mut f : Span<u16>) -> Span<u16> {
     // print!("Computing NTT Kyber\n");
     let mut fHat = array_from_span(f);
     let mut i : u8 = 1;
-    let zeta = get_zeta();
+    let zeta = get_zeta(MLKEM_N);
 
-    let mut len : usize = 128;
+    let mut len : usize = MLKEM_N/2;
     while(len >= 2){
         let mut start : usize = 0;
-        while(start < 256){
+        while(start < MLKEM_N){
             let zeta_i = *zeta.at(i.into());
             i += 1;
 
@@ -41,13 +41,13 @@ pub fn ntt_kyber_inv(mut fHat : Span<u16>) -> Span<u16> {
 
     // print!("Computing Inverse NTT Kyber\n");
     let mut f = array_from_span(fHat);
-    let mut i : usize = 127;
-    let zeta = get_zeta();
+    let mut i : usize = MLKEM_N/2 - 1;
+    let zeta = get_zeta(MLKEM_N);
 
     let mut len : usize = 2;
-    while(len <= 128){
+    while(len <= MLKEM_N/2){
         let mut start : usize = 0;
-        while(start < 256){
+        while(start < MLKEM_N){
             let zeta_i = *zeta.at(i);
             i -= 1;
 
@@ -86,11 +86,11 @@ fn basecase_multiply_ntt_kyber( a0 : u16, a1 : u16, b0 : u16, b1: u16, z2 : i16)
 }
 
 pub fn multiply_ntt_kyber( f: Span<u16>, g: Span<u16>) -> Span<u16> {
-    let zeta2 = get_zeta2();
+    let zeta2 = get_zeta2(MLKEM_N);
 
     let mut hhat : Array<u16> = ArrayTrait::new();
     let mut i : u32 = 0;
-    while(i < 128){
+    while(i < MLKEM_N/2){
         let (c0, c1) = basecase_multiply_ntt_kyber(*f.at(2*i), *f.at(2*i+1), *g.at(2*i), *g.at(2*i+1), *zeta2.at(i));
         hhat.append(c0);
         hhat.append(c1);

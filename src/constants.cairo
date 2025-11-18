@@ -1,8 +1,8 @@
 // parameters for MLKEM
+pub const MLKEM_N: usize = 32;
 pub const MLKEM_Q: usize = 3329;
 pub const MLKEM_Qu16: u16 = 3329;
 pub const MLKEM_Qu64: u64 = 3329;
-pub const MLKEM_N: usize = 256;
 pub const MLKEM512_ETA1 : usize = 3; // generating s,e in KeyGen, y in Encrypt
 pub const MLKEM_ETA : usize = 2; // all other etas
 pub const MLKEM512_K: usize = 2;
@@ -31,18 +31,56 @@ pub const MLKEM1024_CIPHER: usize = 1568;
 
 // NTT constants for ML-KEM
 // Modulus q = 3329
-pub const MLKEM_Q_INVN: u16 = 3303;
+// n = 256
+// pub const MLKEM_Q_INVN: u16 = 3303;
+// n = 128
+// pub const MLKEM_Q_INVN: u16 = 3277;
+// n = 64
+// pub const MLKEM_Q_INVN: u16 = 3225;
+// n = 32
+pub const MLKEM_Q_INVN: u16 = 3121;
 
 // functions added to original file
-pub fn get_zeta() -> Span<u16> {
-    Zeta.span()
+pub fn get_zeta(n : usize) -> Span<u16> {
+    // let tmp = ArrayTrait::new();
+    let mut res = ArrayTrait::new().span();
+    if n == 32 {
+        res = Zeta_32.span();
+    } else if n == 64 {
+        res = Zeta_64.span();
+    } else if n == 128 {
+        res = Zeta_128.span();
+    } else if n == 256 {
+        res = Zeta_256.span();
+    } else if n == 0 {
+        panic!("invalid n");
+    } else {
+        panic!("n does not have precompiled roots");
+    }
+    res
 }
 
-pub fn get_zeta2() -> Span<i16> {
-    Zeta2.span()
+pub fn get_zeta2(n : usize) -> Span<i16> {
+    // let tmp = ArrayTrait::new();
+    let mut res = ArrayTrait::new().span();
+    if n == 32 {
+        res = Zeta2_32.span();
+    } else if n == 64 {
+        res = Zeta2_64.span();
+    } else if n == 128 {
+        res = Zeta2_128.span();
+    } else if n == 256 {
+        res = Zeta2_256.span();
+    } else if n == 0 {
+        panic!("invalid n");
+    } else {
+        panic!("n does not have precompiled roots");
+    }
+    res
+    // res
 }
 
-const Zeta: [u16; 128] = [
+const Zeta_256: [u16; 128] = [
     1, 1729, 2580, 3289, 2642, 630, 1897, 848,
     1062, 1919, 193, 797, 2786, 3260, 569, 1746,
     296, 2447, 1339, 1476, 3046, 56, 2240, 1333,
@@ -61,7 +99,7 @@ const Zeta: [u16; 128] = [
     1722, 1212, 1874, 1029, 2110, 2935, 885, 2154
 ];
 
-const Zeta2: [i16; 128] = [
+const Zeta2_256: [i16; 128] = [
     17, -17, 2761, -2761, 583, -583, 2649, -2649,
     1637, -1637, 723, -723, 2288, -2288, 1100, -1100,
     1409, -1409, 2662, -2662, 3281, -3281, 233, -233,
@@ -78,4 +116,51 @@ const Zeta2: [i16; 128] = [
     1143, -1143, 2150, -2150, 2775, -2775, 886, -886,
     1722, -1722, 1212, -1212, 1874, -1874, 1029, -1029,
     2110, -2110, 2935, -2935, 885, -885, 2154, -2154
+];
+
+const Zeta_128 : [ u16; 64] = [
+        1,    1729,    2580,    3289,    2642,     630,    1897,     848,
+    1062,    1919,     193,     797,    2786,    3260,     569,    1746,
+    296,    2447,    1339,    1476,    3046,      56,    2240,    1333,
+    1426,    2094,     535,    2882,    2393,    2879,    1974,     821,
+    289,     331,    3253,    1756,    1197,    2304,    2277,    2055,
+    650,    1977,    2513,     632,    2865,      33,    1320,    1915,
+    2319,    1435,     807,     452,    1438,    2868,    1534,    2402,
+    2647,    2617,    1481,     648,    2474,    3110,    1227,     910,
+];
+
+
+const Zeta2_128 : [ i16; 64] = [
+    289,    3040,     331,    2998,    3253,      76,    1756,    1573,
+   1197,    2132,    2304,    1025,    2277,    1052,    2055,    1274,
+    650,    2679,    1977,    1352,    2513,     816,     632,    2697,
+   2865,     464,      33,    3296,    1320,    2009,    1915,    1414,
+   2319,    1010,    1435,    1894,     807,    2522,     452,    2877,
+   1438,    1891,    2868,     461,    1534,    1795,    2402,     927,
+   2647,     682,    2617,     712,    1481,    1848,     648,    2681,
+   2474,     855,    3110,     219,    1227,    2102,     910,    2419,
+];
+
+const Zeta_64 : [ u16; 32] = [
+        1,    1729,    2580,    3289,    2642,     630,    1897,     848,
+    1062,    1919,     193,     797,    2786,    3260,     569,    1746,
+    296,    2447,    1339,    1476,    3046,      56,    2240,    1333,
+    1426,    2094,     535,    2882,    2393,    2879,    1974,     821,
+];
+
+const Zeta2_64 : [ i16; 32] = [
+    296,    3033,    2447,     882,    1339,    1990,    1476,    1853,
+   3046,     283,      56,    3273,    2240,    1089,    1333,    1996,
+   1426,    1903,    2094,    1235,     535,    2794,    2882,     447,
+   2393,     936,    2879,     450,    1974,    1355,     821,    2508,
+];
+
+const Zeta_32 : [ u16; 16] = [
+        1,    1729,    2580,    3289,    2642,     630,    1897,     848,
+    1062,    1919,     193,     797,    2786,    3260,     569,    1746,
+];
+
+const Zeta2_32 : [ i16; 16] = [
+    1062,    2267,    1919,    1410,     193,    3136,     797,    2532,
+    2786,     543,    3260,      69,     569,    2760,    1746,    1583,
 ];
