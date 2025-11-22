@@ -3,7 +3,7 @@ use crate::hashes::keccak::keccak_sponge_init_context;
 use crate::hashes::keccak::keccak_sponge_squeeze;
 use crate::hashes::keccak::keccak_sponge_absorb;
 use crate::utils::bytes_to_bits;
-use crate::constants::{MLKEM_Q, MLKEM_Qu16};
+use crate::constants::{MLKEM_Q, MLKEM_Qu16, MLKEM_N};
 
 
 /// Takes a 32-byte seed and two indices as input and outputs a pseudorandom element of 𝑇𝑞.
@@ -20,21 +20,21 @@ pub fn sample_ntt(bytes: Span<u8>) -> Array<u16> {
     let mut idx : usize = 0;
     let mut aHat : Array<u16> = ArrayTrait::new();
 
-    while j < 256_usize && idx + 3 <= want_bytes {
+    while j < MLKEM_N && idx + 3 <= want_bytes {
         // let (ctx, mut c) = keccak_sponge_squeeze(ctx, 3); // this could be just made easier by grabbing say 3 * 512 bytes
         let c0 : u16 = c.pop_front().unwrap().into();
         let c1 : u16 = c.pop_front().unwrap().into();
         let c2 : u16 = c.pop_front().unwrap().into();
         idx +=3;
 
-        let d1 : u16 = (c0 + 256_u16 *( c1 % 16 ));
+        let d1 : u16 = (c0 + MLKEM_N.try_into().unwrap() *( c1 % 16 ));
         let d2 : u16 = (c1/16 + 16 * c2);
     
         if( d1.into() < MLKEM_Q){
             aHat.append(d1);
             j += 1;
         }
-        if( d2.into() < MLKEM_Q && j < 256){
+        if( d2.into() < MLKEM_Q && j < MLKEM_N){
             aHat.append(d2);
             j += 1;
         }
@@ -57,7 +57,7 @@ pub fn sample_poly_cbd(bytes: Span<u8>, eta: usize) -> Array<u16> {
     let mut f : Array<u16> = ArrayTrait::new();
 
     let mut i = 0;
-    while( i.into() < 256_usize){
+    while( i < MLKEM_N){
         let mut x : u16 = 0;
         let mut y : u16 = 0;
 

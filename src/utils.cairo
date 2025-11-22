@@ -4,7 +4,7 @@
 // Variable naming is compliant to RFC-6234 (https://datatracker.ietf.org/doc/html/rfc6234)
 
 use crate::opt_math::{OptBitShift, OptWrapping};
-use crate::constants::{MLKEM_Qu16, MLKEM_Q};
+use crate::constants::{MLKEM_Qu16, MLKEM_Q, MLKEM_N};
 use core::num::traits::{Bounded, WrappingAdd};
 use core::traits::{BitAnd, BitOr, BitXor, BitNot};
 
@@ -361,7 +361,7 @@ pub fn bytes_to_bits(bytes: Span<u8>) -> Array<u8> {
 
 /// encodes an array of d-bit integers into a byte array, 1 <= d <= 12
 pub fn byte_encode(F: Span<u16>, d : usize) -> Array<u8>{
-    if(F.len() != 256 || d < 1 || d > 12){
+    if(F.len() != MLKEM_N || d < 1 || d > 12){
         panic!("Wrong parameters for byte_encode");
     }
     // println!("Running byte_encode!");
@@ -369,7 +369,7 @@ pub fn byte_encode(F: Span<u16>, d : usize) -> Array<u8>{
     let m : u16 = set_modulus(d);
     let mut i = 0;
     let mut b : Array<u8> = ArrayTrait::new();
-    while i < 256_usize{
+    while i < MLKEM_N{
         // println!("panic with {}", i);
         let mut a : u16 = *F[i] % m;
         let mut j = 0;
@@ -386,8 +386,9 @@ pub fn byte_encode(F: Span<u16>, d : usize) -> Array<u8>{
 
 /// decodes a byte array into an array of d-bit integers, 1 <= d <= 12
 pub fn byte_decode(B : Span<u8>, d : usize) -> Array<u16> {
-    if(B.len() % 32 != 0 || d < 1 || d > 12){
-        panic!("Wrong parameters for byte_encode");
+    // if(B.len() % 32 != 0 || d < 1 || d > 12){
+    if(d < 1 || d > 12){
+        panic!("Wrong parameters for byte_decode");
     }
     let m : u16 = set_modulus(d);
     let b = bytes_to_bits(B);
@@ -395,7 +396,7 @@ pub fn byte_decode(B : Span<u8>, d : usize) -> Array<u16> {
     let powers_2 = get_powers_2();
     let mut F : Array<u16> = ArrayTrait::new();
     let mut i = 0;
-    while i < 256_usize{
+    while i < MLKEM_N{
         let mut sum: usize = 0;
         let mut j = 0;
         while j < d {

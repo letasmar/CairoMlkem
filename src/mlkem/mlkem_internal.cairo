@@ -1,5 +1,5 @@
 use crate::constants::{MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU,
-    MLKEM512_DV, MLKEM512_ENCAPS_K, MLKEM512_DECAPS_K, MLKEM512_CIPHER, MLKEM_SHARED_KEY_LEN};
+    MLKEM512_DV, MLKEM512_ENCAPS_K, MLKEM512_DECAPS_K, MLKEM512_CIPHER, MLKEM_SHARED_KEY_LEN, MLKEM_N};
 use crate::mlkem::keys;
 use crate::mlkem::keyCipher;
 use crate::mlkem::keys_init;
@@ -33,6 +33,9 @@ pub fn mlkem_key_gen_512_impl() -> keys{
     let mut k : keys = keys_init();
     k.ek = kpkeKeys.ek;
     k.dk = array_from_span(concat_arrays(tmp2, z));
+    // key lengths are:
+    //  n * 12/8 * k + + 32 for ek
+    //  n * 12/8 * k * 2 + 96 for dk
     k.ek_len = MLKEM512_ENCAPS_K.try_into().unwrap();
     k.dk_len = MLKEM512_DECAPS_K.try_into().unwrap();
     k
@@ -64,15 +67,17 @@ pub fn mlkem_encaps_512_impl( ek : Span<u8> ) -> keyCipher{
 }
 
 pub fn mlkem_decaps_512_impl( dk_span : Span<u8>, cipher : Span<u8> ) -> Array<u8>{
-    let dk_pke = dk_span.slice(0, 384 * MLKEM512_K);
-    let ek_pke = dk_span.slice(384 * MLKEM512_K, MLKEM512_ENCAPS_K);
-    let h = dk_span.slice(768 * MLKEM512_K, 32  );
-    let z = dk_span.slice(768 * MLKEM512_K + 32, 32 );
+    let bytes_per_poly = MLKEM_N * 12 / 8;
+    let dk_pke = dk_span.slice(0, bytes_per_poly * MLKEM512_K);
+    let ek_pke = dk_span.slice(bytes_per_poly * MLKEM512_K, bytes_per_poly * MLKEM512_K + 32 );
+    let h = dk_span.slice(bytes_per_poly * 2 * MLKEM512_K + 32, 32  );
+    // these are used only when decryption fails, not implemented
+    // let z = dk_span.slice(bytes_per_poly * 2 * MLKEM512_K + 32, 32 );
 
     let m = kpke::kpke_decrypt(dk_pke, cipher, MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
-
+    println!("Decrypted, restarting key derivation to verify ciphertext");
     // derive shared key K'
-    let (K_prime, r_prime ) = G(concat_arrays(m.span(), H(ek_pke).span()));
+    let (K_prime, r_prime ) = G(concat_arrays(m.span(), h));
     for byte in K_prime.span(){
         println!("0x{:x}", *byte);
     }
@@ -84,8 +89,8 @@ pub fn mlkem_decaps_512_impl( dk_span : Span<u8>, cipher : Span<u8> ) -> Array<u
     }
     if(c_prime.span() != cipher){
         panic!("Decapsulation failed, ciphertexts do not match");
-
     }
+    print!("Decapsulation succeeded, shared keys match.\n");
 
     K_prime
 }

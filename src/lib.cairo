@@ -15,23 +15,55 @@ use mlkem::mlkem_decaps_512;
 use mlkem::mlkem_internal::{get_ek,get_dk, get_cipher};
 use mlkem::keyCipher;
 use utils::append_n_zeroes;
+use constants::{MLKEM_N};
 
 #[executable]
 fn main(){
     // try out full mlkem512 flow
     // all random seeds are hardcoded
     let keys = mlkem_key_gen_512();
+    // assert!(keys.ek.len() == constants::MLKEM512_ENCAPS_K);
+    // assert!(keys.dk.len() == constants::MLKEM512_DECAPS_K);
+    // assert!(compare_arrays(keys.ek.span(), get_ek()));
+    // assert!(compare_arrays(keys.dk.span(), get_dk()));
+    // panic!("Testing MLKEM512 flow:");
+    print!("MLKEM512 Key Generation complete.\n");  
     let keyCipher = mlkem_encaps_512(keys.ek.span());
+    // assert!(keyCipher.c.len() == constants::MLKEM512_CIPHER);
+    // assert!(compare_arrays(keyCipher.c.span(), get_cipher()));
+    print!("MLKEM512 Encapsulation complete.\n");
     let recovered_key = mlkem_decaps_512(keys.dk.span(), keyCipher.c.span());
     print!("MLKEM512 flow complete. Recovered key length: {}\n", recovered_key.len());
-    print!("Shared key bytes:\n");
-    print_u8_array(recovered_key.span());
+    // print!("Shared key bytes:\n");
+    // test_decaps();
+    // test_ntt();
+    // test_multiply_ntt();
+    // print_u8_array(recovered_key.span());
+}
+
+// fn compare_arrays<T, +Copy<T>, +PartialEq<T>, +Drop<T>>(a: Span<T>, b: Span<T>) -> bool {
+fn compare_arrays(a: Span<u8>, b: Span<u8>) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut i: usize = 0;
+    while i < a.len() {
+        if *a.at(i) != *b.at(i) {
+            print!("array a bytes:\n");
+            print_u8_array(a);
+            print!("array b bytes:\n");
+            print_u8_array(b);
+            return false;
+        }
+        i += 1;
+    }
+    return true;
 }
 
 fn test_ntt(){
     let mut a = ArrayTrait::new();
     let mut i : u16 = 0;
-    while(i < 256){
+    while(i < constants::MLKEM_N.try_into().unwrap()){
         a.append(i);
         i += 1;
     }
@@ -43,9 +75,9 @@ fn test_ntt(){
     for i in 0..a_span.len() {
         // std::cout << "Index " << i << ": original " << input[i] << ", transformed " << transformed[i] << std::endl;
         println!("Index {}: original {}, transformed {}", i, *a_span.at(i), *a_ntt.at(i));
-        // if(*a_span.at(i) != *a_invntt.at(i)){
-        //     panic!("NTT test failed at index {}: original {}, after invntt {}", i, *a_span.at(i), *a_invntt.at(i));
-        // }
+        if(*a_span.at(i) != *a_invntt.at(i)){
+            panic!("NTT test failed at index {}: original {}, after invntt {}", i, *a_span.at(i), *a_invntt.at(i));
+        }
     }
     assert!(a_span == a_invntt);
     // panic!("NTT test passed");
@@ -55,7 +87,7 @@ fn test_multiply_ntt(){
     let mut a = ArrayTrait::new();
     let mut b = ArrayTrait::new();
     let mut i : usize = 0;
-    let N : usize = 256;
+    let N : usize = MLKEM_N;
     while(i < N){
         a.append(1);
         b.append(2);
@@ -69,7 +101,7 @@ fn test_multiply_ntt(){
     // for i in 0..a_span.len() {
     //     println!("Index {}: a {}, b {}, multiply {}", i, *a_span.at(i), *b_span.at(i), *c_ntt.at(i));
     // }
-    let zeta2 = constants::get_zeta2();
+    let zeta2 = constants::get_zeta2(MLKEM_N);
     i = 0;
     let expectedh1 : u16 = 4;
     while(i < N/2){

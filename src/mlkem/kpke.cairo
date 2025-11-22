@@ -17,7 +17,7 @@ use crate::utils::compress;
 use crate::utils::concat_arrays;
 use crate::utils::print_u16_span_dec;
 use crate::utils::print_u8_span_hex;
-use crate::constants::MLKEM_ETA;
+use crate::constants::{MLKEM_ETA, MLKEM_N};
 
 /// d is random seed of 32 bytes, others are mlkem parameters
 /// keys struct contains ek and dk as u8 arrays
@@ -68,7 +68,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
             );
             let mut idx2 = 0;
             let mut tmp : Array<u16> = ArrayTrait::new();
-            while idx2 < 256 {
+            while idx2 < MLKEM_N {
                 let sum = add_mod(*acc.at(idx2), *product.at(idx2));
                 tmp.append(sum);
                 // acc = set_array_at(acc, idx2, sum);
@@ -80,7 +80,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
 
         let mut idx : usize = 0;
         let mut tmp2 : Array<u16> = ArrayTrait::new();
-        while idx < 256{
+        while idx < MLKEM_N{
             // tHat[i][idx] = add_mod(tHat[i][idx], e_ntt[i]);
             let sum = add_mod(*acc.at(idx), *e_ntt.at(i).at(idx));
             // acc = set_array_at(acc, idx, sum);
@@ -130,16 +130,15 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     // print!("Running kpke_encrypt\n");
     let mut i :usize = 0;
     let mut tHat : Array<Array<u16>> = ArrayTrait::new();
-
+    let bytes_per_poly : usize = MLKEM_N * 12 / 8;
     while i < k{
-        let start_idx : usize = i.into() * 384;
-        let end_idx : usize = start_idx + 384;
-        let encoded_poly = ek_span.slice(start_idx, 384);
+        let start_idx : usize = i * bytes_per_poly;
+        let encoded_poly = ek_span.slice(start_idx, bytes_per_poly);
         tHat.append(byte_decode(encoded_poly, 12));
         i += 1;
     }
 
-    let rho_start_idx : usize = k * 384;
+    let rho_start_idx : usize = k * bytes_per_poly;
     let rho = ek_span.slice(rho_start_idx, 32);
 
     // re-generate Ahat
@@ -166,7 +165,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     while i < k.try_into().unwrap(){
         // acc = uHat[i]
         let mut acc: Array<u16> = ArrayTrait::new();
-        acc = append_n_zeroes(acc, 256, 0);
+        acc = append_n_zeroes(acc, MLKEM_N, 0);
         let mut j : usize = 0;
         while j < k {
             let mut idx_1 : usize = (j * k + i.into());
@@ -177,7 +176,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
 
             let mut idx2 = 0;
             let mut tmp : Array<u16> = ArrayTrait::new();
-            while idx2 < 256 {
+            while idx2 < MLKEM_N {
                 let sum = add_mod(*acc.at(idx2), *product.at(idx2));
                 // acc = set_array_at(acc, idx2, sum); - expensive
                 tmp.append(sum);
@@ -191,7 +190,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
         // add e1
         let mut idx3 = 0;
         let mut acc2: Array<u16> = ArrayTrait::new();
-        while idx3 < 256{
+        while idx3 < MLKEM_N {
             let e1_i = e1.at(i);
             let sum = add_mod(*acc_inv.at(idx3), *e1_i.at(idx3));
             acc2.append(sum);
@@ -206,7 +205,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     let mut v : Array<u16> = ArrayTrait::new();
 
     let mut acc: Array<u16> = ArrayTrait::new();
-    acc = append_n_zeroes(acc, 256, 0);
+    acc = append_n_zeroes(acc, MLKEM_N, 0);
     i = 0;
 
     while i < k.try_into().unwrap(){
@@ -215,7 +214,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
         let product = multiply_ntt_kyber(tHat_i.span(), y_ntt_i.span());
         let mut idx2 = 0;
         let mut tmp : Array<u16> = ArrayTrait::new();
-        while idx2 < 256 {
+        while idx2 < MLKEM_N {
             let sum = add_mod(*acc.at(idx2), *product.at(idx2));
             tmp.append(sum);
             idx2 += 1;
@@ -225,7 +224,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     }
     let acc_inv = ntt_kyber_inv(acc.span());
     let mut idx3 = 0;
-    while idx3 < 256{
+    while idx3 < MLKEM_N{
         let sum1 = add_mod(*acc_inv.at(idx3), *e2.at(idx3));
         let sum2 = add_mod(sum1, *mu.at(idx3));
         v.append(sum2);
@@ -236,7 +235,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     let mut c1 : Array<u8> = ArrayTrait::new();
     let c2 : Array<u8> = byte_encode(compress(v.span(), dv).span(), dv);
 
-
+    // uHat is a vector of k polynomials in ring n 
     i = 0;
     while i < k.try_into().unwrap(){
         let uHat_i = uHat.at(i.into());
@@ -253,11 +252,11 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
 
 pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: usize, dv: usize) -> Array<u8> {
     // get c_1 and c_2 from cipher
-    let c1 = cipher.slice(0, 32 * k * du);
-    let c2 = cipher.slice(32 * k * du, cipher.len() - (32 * k * du));
-
-    let c1_bytes : usize = ((du * 256  + 7) / 8) * k;
-    let c2_bytes : usize = ((dv * 256  + 7) / 8);
+    let c1_bytes : usize = ((du * MLKEM_N  + 7) / 8) * k;
+    print!("slicing c1 and c2\n");
+    let c1 = cipher.slice(0, c1_bytes);
+    let c2 = cipher.slice(c1_bytes, cipher.len() - c1_bytes);
+    print!("reconstructing uHat and v\n");
 
     // reconstruct uHat from c1
     let mut uHat : Array<Array<u16>> = ArrayTrait::new();
@@ -270,14 +269,15 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
         uHat.append(decompressed_poly);
         i += 1;
     }
-
+    print!("reconstructing v\n");
     // reconstruct v from c2
     let decoded_v = byte_decode(c2, dv);
     let v = decompress(decoded_v.span(), dv);
 
-
+    // reconstruct s from dk
+    print!("reconstructing s from dk\n");
     let mut s_ntt : Array<Array<u16>> = ArrayTrait::new();
-    let bytesPerPoly : usize = ((12 * 256 + 7) / 8);
+    let bytesPerPoly : usize = ((12 * MLKEM_N + 7) / 8);
     i = 0;
     while i < k {
         let offset : usize = i * bytesPerPoly;
@@ -290,7 +290,7 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
     // compute w
     let mut w : Array<u16> = ArrayTrait::new();
 
-    w = append_n_zeroes(w, 256, 0);
+    w = append_n_zeroes(w, MLKEM_N, 0);
     i = 0;
     while i < k.try_into().unwrap(){
         let uHat_i = uHat.at(i.into());
@@ -299,7 +299,7 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
         let product = multiply_ntt_kyber(u_ntt_i, s_ntt_i.span());
         let mut idx2 = 0;
         let mut tmp : Array<u16> = ArrayTrait::new();
-        while idx2 < 256 {
+        while idx2 < MLKEM_N {
             let sum = add_mod(*w.at(idx2), *product.at(idx2));
             // w = set_array_at(w, idx2, sum);
             tmp.append(sum);
@@ -312,7 +312,7 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
     let w_inv = ntt_kyber_inv(w.span());
     let mut final_w = ArrayTrait::new();
     i = 0;
-    while i < 256{
+    while i < MLKEM_N{
         final_w.append(sub_mod(*v.at(i), *w_inv.at(i)));
         i += 1;
     }
