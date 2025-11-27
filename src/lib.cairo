@@ -25,8 +25,8 @@ fn main(){
     assert!(keyCipher.key.span() == get_cipher());
     // let recovered_key = mlkem_decaps_512(keys.dk.span(), keyCipher.c.span());
     // print!("MLKEM512 flow complete. Recovered key length: {}\n", recovered_key.len());
-    // print!("Shared key bytes:\n");
-    // print_u8_array(recovered_key.span());
+    print!("Shared key bytes:\n");
+    print_u8_array(keyCipher.key.span());
 }
 
 fn test_ntt(){
