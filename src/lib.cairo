@@ -21,11 +21,13 @@ fn main(){
     // try out full mlkem512 flow
     // all random seeds are hardcoded
     let keys = mlkem_key_gen_512();
-    let keyCipher = mlkem_encaps_512(keys.ek.span());
-    let recovered_key = mlkem_decaps_512(keys.dk.span(), keyCipher.c.span());
-    print!("MLKEM512 flow complete. Recovered key length: {}\n", recovered_key.len());
-    print!("Shared key bytes:\n");
-    print_u8_array(recovered_key.span());
+    assert!(keys.ek.span() == mlkem::mlkem_internal::get_ek());
+    assert!(keys.dk.span() == mlkem::mlkem_internal::get_dk());
+    // let keyCipher = mlkem_encaps_512(keys.ek.span());
+    // let recovered_key = mlkem_decaps_512(keys.dk.span(), keyCipher.c.span());
+    // print!("MLKEM512 flow complete. Recovered key length: {}\n", recovered_key.len());
+    // print!("Shared key bytes:\n");
+    // print_u8_array(recovered_key.span());
 }
 
 fn test_ntt(){
