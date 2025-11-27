@@ -20,12 +20,13 @@ use utils::append_n_zeroes;
 fn main(){
     // try out full mlkem512 flow
     // all random seeds are hardcoded
-    let keys = mlkem_key_gen_512();
-    let keyCipher = mlkem_encaps_512(keys.ek.span());
-    let recovered_key = mlkem_decaps_512(keys.dk.span(), keyCipher.c.span());
-    print!("MLKEM512 flow complete. Recovered key length: {}\n", recovered_key.len());
-    print!("Shared key bytes:\n");
-    print_u8_array(recovered_key.span());
+    // let keys = mlkem_key_gen_512();
+    let keyCipher = mlkem_encaps_512(get_ek());
+    assert!(keyCipher.key.span() == get_cipher());
+    // let recovered_key = mlkem_decaps_512(keys.dk.span(), keyCipher.c.span());
+    // print!("MLKEM512 flow complete. Recovered key length: {}\n", recovered_key.len());
+    // print!("Shared key bytes:\n");
+    // print_u8_array(recovered_key.span());
 }
 
 fn test_ntt(){
