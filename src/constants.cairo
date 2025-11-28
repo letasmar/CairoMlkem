@@ -9,10 +9,10 @@ pub const MLKEM512_K: usize = 2;
 pub const MLKEM768_K: usize = 3;
 pub const MLKEM1024_K: usize = 4;
 
-pub const MLKEM512_DV: usize = 4;
+pub const MLKEM512_DV: usize = 5;
 pub const MLKEM768_DV: usize = 4;
 pub const MLKEM1024_DV: usize = 5;
-pub const MLKEM512_DU: usize = 10;
+pub const MLKEM512_DU: usize = 11;
 pub const MLKEM768_DU: usize = 10;
 pub const MLKEM1024_DU: usize = 11;
 
