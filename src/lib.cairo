@@ -14,12 +14,11 @@ use mlkem::mlkem_encaps_512;
 use mlkem::mlkem_decaps_512;
 use mlkem::mlkem_internal::{get_ek,get_dk, get_cipher};
 use mlkem::keyCipher;
-use utils::append_n_zeroes;
 
 #[executable]
 fn main(){
-    // try out full mlkem512 flow
     // all random seeds are hardcoded
+    print!("Starting MLKEM512 test\n");
     let keys = mlkem_key_gen_512();
     let keyCipher = mlkem_encaps_512(keys.ek.span());
     let recovered_key = mlkem_decaps_512(keys.dk.span(), keyCipher.c.span());
@@ -41,7 +40,6 @@ fn test_ntt(){
 
     assert!(a_span.len() == a_invntt.len());
     for i in 0..a_span.len() {
-        // std::cout << "Index " << i << ": original " << input[i] << ", transformed " << transformed[i] << std::endl;
         println!("Index {}: original {}, transformed {}", i, *a_span.at(i), *a_ntt.at(i));
         // if(*a_span.at(i) != *a_invntt.at(i)){
         //     panic!("NTT test failed at index {}: original {}, after invntt {}", i, *a_span.at(i), *a_invntt.at(i));
@@ -91,7 +89,7 @@ fn test_keygen(){
     let keys = mlkem::mlkem_key_gen_512();
     assert!(keys.ek.len() == constants::MLKEM512_ENCAPS_K);
     assert!(keys.dk.len() == constants::MLKEM512_DECAPS_K);
-    let k = constants::MLKEM512_DECAPS_K;
+    // let k = constants::MLKEM512_DECAPS_K;
     // println!("DK last {} bytes:", k);
     // print_last_k_bytes(keys.dk.span(), k);
     // println!("EK last {} bytes:", k);

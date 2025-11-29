@@ -8,15 +8,14 @@ use crate::ntt::multiply_ntt_kyber;
 use crate::zq::add_mod;
 use crate::zq::sub_mod;
 use crate::utils::array_from_span;
-use crate::utils::set_array_at;
 use crate::utils::append_n_zeroes;
 use crate::utils::byte_encode;
 use crate::utils::byte_decode;
 use crate::utils::decompress;
 use crate::utils::compress;
 use crate::utils::concat_arrays;
-use crate::utils::print_u16_span_dec;
-use crate::utils::print_u8_span_hex;
+// use crate::utils::print_u16_span_dec;
+// use crate::utils::print_u8_span_hex;
 use crate::constants::MLKEM_ETA;
 
 /// d is random seed of 32 bytes, others are mlkem parameters
@@ -29,7 +28,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     
     // G is SHA3-512
     let (rho, sigma ) = G(d.clone());
-    let rho_span = rho.span();
+    
     let mut big_n0 : u8 = 0;
     // generate matrix Ahat
     let mut Ahat : Array<Array<u16>> = generate_matrix(k, rho.clone());
@@ -38,7 +37,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     let (mut s, mut big_n1) = generate_vector( k, sigma.span(), eta, big_n0);
     
     // generate e vector
-    let (mut e, mut big_n2) = generate_vector( k, sigma.span(), eta, big_n1);
+    let (mut e, mut _big_n2) = generate_vector( k, sigma.span(), eta, big_n1);
     
     // run ntt on s and e each coordinate
     let mut s_ntt : Array<Array<u16>> = ArrayTrait::new();
@@ -133,7 +132,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
 
     while i < k{
         let start_idx : usize = i.into() * 384;
-        let end_idx : usize = start_idx + 384;
+        // let end_idx : usize = start_idx + 384;
         let encoded_poly = ek_span.slice(start_idx, 384);
         tHat.append(byte_decode(encoded_poly, 12));
         i += 1;
@@ -257,7 +256,7 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
     let c2 = cipher.slice(32 * k * du, cipher.len() - (32 * k * du));
 
     let c1_bytes : usize = ((du * 256  + 7) / 8) * k;
-    let c2_bytes : usize = ((dv * 256  + 7) / 8);
+    // let c2_bytes : usize = ((dv * 256  + 7) / 8);
 
     // reconstruct uHat from c1
     let mut uHat : Array<Array<u16>> = ArrayTrait::new();

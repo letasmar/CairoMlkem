@@ -14,7 +14,7 @@ pub fn sample_ntt(bytes: Span<u8>) -> Array<u16> {
     ctx = keccak_sponge_absorb(ctx, bytes);
     
     let want_bytes : usize = 3 * 512;
-    let (ctx, mut c) = keccak_sponge_squeeze(ctx, want_bytes);
+    let (_ctx, mut c) = keccak_sponge_squeeze(ctx, want_bytes);
     
     let mut j : usize = 0;
     let mut idx : usize = 0;

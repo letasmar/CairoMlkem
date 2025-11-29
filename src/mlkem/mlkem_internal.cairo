@@ -9,7 +9,6 @@ use crate::hashes::H;
 use crate::hashes::G;
 use crate::mlkem::kpke;
 use crate::utils::array_from_span;
-use crate::utils::print_u8_span_hex;
 
 /// MLKEM-512 key generation
 /// Returns a struct containing the encapsulation key and decapsulation key
@@ -67,15 +66,17 @@ pub fn mlkem_decaps_512_impl( dk_span : Span<u8>, cipher : Span<u8> ) -> Array<u
     let dk_pke = dk_span.slice(0, 384 * MLKEM512_K);
     let ek_pke = dk_span.slice(384 * MLKEM512_K, MLKEM512_ENCAPS_K);
     let h = dk_span.slice(768 * MLKEM512_K, 32  );
-    let z = dk_span.slice(768 * MLKEM512_K + 32, 32 );
+    // z is used for generating a key if decapsulation fails
+    // let z = dk_span.slice(768 * MLKEM512_K + 32, 32 );
 
     let m = kpke::kpke_decrypt(dk_pke, cipher, MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
 
     // derive shared key K'
-    let (K_prime, r_prime ) = G(concat_arrays(m.span(), H(ek_pke).span()));
-    for byte in K_prime.span(){
-        println!("0x{:x}", *byte);
-    }
+    let (K_prime, r_prime ) = G(concat_arrays(m.span(), h));
+    // print byte of derived key
+    // for byte in K_prime.span(){
+    //     println!("0x{:x}", *byte);
+    // }
 
     let c_prime = kpke::kpke_encrypt(ek_pke, m.span(), r_prime.span(), MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
 
