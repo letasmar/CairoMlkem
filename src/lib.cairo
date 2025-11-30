@@ -22,7 +22,7 @@ fn main(){
     // all random seeds are hardcoded
     // let keys = mlkem_key_gen_512();
     let keyCipher = mlkem_encaps_512(get_ek());
-    assert!(keyCipher.key.span() == get_cipher());
+    assert!(keyCipher.c.span() == get_cipher());
     // let recovered_key = mlkem_decaps_512(keys.dk.span(), keyCipher.c.span());
     // print!("MLKEM512 flow complete. Recovered key length: {}\n", recovered_key.len());
     print!("Shared key bytes:\n");
