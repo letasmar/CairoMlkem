@@ -32,6 +32,8 @@ fn main(){
     // assert!(keyCipher.c.len() == constants::MLKEM512_CIPHER);
     // assert!(compare_arrays(keyCipher.c.span(), get_cipher()));
     print!("MLKEM512 Encapsulation complete.\n");
+    // print out key bytes
+    print_u8_array(keyCipher.key.span());
     let recovered_key = mlkem_decaps_512(keys.dk.span(), keyCipher.c.span());
     print!("MLKEM512 flow complete. Recovered key length: {}\n", recovered_key.len());
     // print!("Shared key bytes:\n");
