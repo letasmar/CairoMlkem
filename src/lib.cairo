@@ -22,11 +22,28 @@ fn main(){
     // all random seeds are hardcoded
     // let keys = mlkem_key_gen_512();
     let keyCipher = mlkem_encaps_512(get_ek());
-    assert!(keyCipher.c.span() == get_cipher());
     // let recovered_key = mlkem_decaps_512(keys.dk.span(), keyCipher.c.span());
     // print!("MLKEM512 flow complete. Recovered key length: {}\n", recovered_key.len());
+    if(!compare_arrays(keyCipher.c.span(), get_cipher())){
+        panic!("MLKEM512 flow failed: keys do not match");
+    }
     print!("Shared key bytes:\n");
     print_u8_array(keyCipher.key.span());
+}
+
+fn compare_arrays(arr1: Span<u8>, arr2: Span<u8>) -> bool {
+    if arr1.len() != arr2.len() {
+        return false;
+    }
+    let len = arr1.len();
+    let mut i: usize = 0;
+    while i < len {
+        if *arr1.at(i) != *arr2.at(i) {
+            return false;
+        }
+        i += 1;
+    }
+    true
 }
 
 fn test_ntt(){
