@@ -29,7 +29,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     
     // G is SHA3-512
     let (rho, sigma ) = G(d.clone());
-    let rho_span = rho.span();
+    
     let mut big_n0 : u8 = 0;
     // generate matrix Ahat
     let mut Ahat : Array<Array<u16>> = generate_matrix(k, rho.clone());
@@ -38,7 +38,7 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
     let (mut s, mut big_n1) = generate_vector( k, sigma.span(), eta, big_n0);
     
     // generate e vector
-    let (mut e, mut big_n2) = generate_vector( k, sigma.span(), eta, big_n1);
+    let (mut e, mut _big_n2) = generate_vector( k, sigma.span(), eta, big_n1);
     
     // run ntt on s and e each coordinate
     let mut s_ntt : Array<Array<u16>> = ArrayTrait::new();
@@ -127,7 +127,6 @@ pub fn kpke_keygen( d : Span<u8>, k : usize, eta : usize, du : usize, dv: usize)
 pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, eta : usize, du : usize, dv: usize) -> Array<u8>{
     let mut big_n : u8 = 0;
     let mut eta2 : usize = MLKEM_ETA; // eta2 is same for all variants
-    // print!("Running kpke_encrypt\n");
     let mut i :usize = 0;
     let mut tHat : Array<Array<u16>> = ArrayTrait::new();
     let bytes_per_poly : usize = MLKEM_N * 12 / 8;
@@ -171,7 +170,6 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
             let mut idx_1 : usize = (j * k + i.into());
             let Ahat_idx = Ahat.at(idx_1);
             let y_ntt_j = y_ntt.at(j);
-
             let product = multiply_ntt_kyber(Ahat_idx.span(), y_ntt_j.span());
 
             let mut idx2 = 0;
@@ -203,7 +201,6 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     let mu : Array<u16> = decompress(byte_decode(m, 1).span(), 1);
     // compute v
     let mut v : Array<u16> = ArrayTrait::new();
-
     let mut acc: Array<u16> = ArrayTrait::new();
     acc = append_n_zeroes(acc, MLKEM_N, 0);
     i = 0;
@@ -235,7 +232,7 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
     let mut c1 : Array<u8> = ArrayTrait::new();
     let c2 : Array<u8> = byte_encode(compress(v.span(), dv).span(), dv);
 
-    // uHat is a vector of k polynomials in ring n 
+    // uHat is a vector of k polynomials in ring n
     i = 0;
     while i < k.try_into().unwrap(){
         let uHat_i = uHat.at(i.into());
@@ -253,10 +250,10 @@ pub fn kpke_encrypt(ek_span : Span<u8>, m : Span<u8>, r : Span<u8>, k : usize, e
 pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: usize, dv: usize) -> Array<u8> {
     // get c_1 and c_2 from cipher
     let c1_bytes : usize = ((du * MLKEM_N  + 7) / 8) * k;
-    print!("slicing c1 and c2\n");
+    // print!("c1_bytes: {}\n", c1_bytes);
+
     let c1 = cipher.slice(0, c1_bytes);
     let c2 = cipher.slice(c1_bytes, cipher.len() - c1_bytes);
-    print!("reconstructing uHat and v\n");
 
     // reconstruct uHat from c1
     let mut uHat : Array<Array<u16>> = ArrayTrait::new();
@@ -269,13 +266,13 @@ pub fn kpke_decrypt(dk: Span<u8>, cipher: Span<u8>, k: usize, eta: usize, du: us
         uHat.append(decompressed_poly);
         i += 1;
     }
-    print!("reconstructing v\n");
+
     // reconstruct v from c2
     let decoded_v = byte_decode(c2, dv);
     let v = decompress(decoded_v.span(), dv);
+    
 
     // reconstruct s from dk
-    print!("reconstructing s from dk\n");
     let mut s_ntt : Array<Array<u16>> = ArrayTrait::new();
     let bytesPerPoly : usize = ((12 * MLKEM_N + 7) / 8);
     i = 0;

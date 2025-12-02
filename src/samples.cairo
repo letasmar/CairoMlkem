@@ -13,8 +13,8 @@ pub fn sample_ntt(bytes: Span<u8>) -> Array<u16> {
     let mut ctx : SpongeContext = keccak_sponge_init_context(SHAKE128_RATE_BYTES, SHAKE128_DOMAIN);
     ctx = keccak_sponge_absorb(ctx, bytes);
     
-    let want_bytes : usize = 3 * 512;
-    let (ctx, mut c) = keccak_sponge_squeeze(ctx, want_bytes);
+    let want_bytes : usize = 5 * MLKEM_N;
+    let (_ctx, mut c) = keccak_sponge_squeeze(ctx, want_bytes);
     
     let mut j : usize = 0;
     let mut idx : usize = 0;

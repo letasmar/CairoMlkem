@@ -23,6 +23,7 @@ pub fn mlkem_key_gen_512_impl() -> keys{
     }
 
     let kpkeKeys = kpke::kpke_keygen(d, MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
+    
     let ekpke = kpkeKeys.ek.span();
     let dkpke = kpkeKeys.dk.span();
 
@@ -33,11 +34,12 @@ pub fn mlkem_key_gen_512_impl() -> keys{
     let mut k : keys = keys_init();
     k.ek = kpkeKeys.ek;
     k.dk = array_from_span(concat_arrays(tmp2, z));
-    // key lengths are:
+
+    // real key lengths are:
     //  n * 12/8 * k + + 32 for ek
     //  n * 12/8 * k * 2 + 96 for dk
-    k.ek_len = MLKEM512_ENCAPS_K.try_into().unwrap();
-    k.dk_len = MLKEM512_DECAPS_K.try_into().unwrap();
+    k.ek_len = k.ek.span().len().try_into().unwrap();
+    k.dk_len = k.dk.span().len().try_into().unwrap();
     k
 }
 
@@ -50,13 +52,12 @@ pub fn mlkem_key_gen_512_impl() -> keys{
 pub fn mlkem_encaps_512_impl( ek : Span<u8> ) -> keyCipher{
     // internal needs one random 32byte for the message
     let m = get_message512();
-    if(m.len() != 32_usize){
-        panic!("Message must be 32 bytes long");
+    if(m.len() != MLKEM_N / 8){
+        panic!("Message must be {} bytes long", MLKEM_N / 8);
     }
     // derive shared key K and randomness r
     let (K, r ) = G(concat_arrays(m, H(ek).span()));
     let r_span = r.span();
-
     let c = kpke::kpke_encrypt(ek, m, r_span, MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
     let mut kc : keyCipher = keyCipher_init();
     kc.key = K;
@@ -75,24 +76,18 @@ pub fn mlkem_decaps_512_impl( dk_span : Span<u8>, cipher : Span<u8> ) -> Array<u
     // let z = dk_span.slice(bytes_per_poly * 2 * MLKEM512_K + 32, 32 );
 
     let m = kpke::kpke_decrypt(dk_pke, cipher, MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
-    println!("Decrypted, restarting key derivation to verify ciphertext");
+    
     // derive shared key K'
     let (K_prime, r_prime ) = G(concat_arrays(m.span(), h));
-    for byte in K_prime.span(){
-        println!("0x{:x}", *byte);
-    }
-
+    
     let c_prime = kpke::kpke_encrypt(ek_pke, m.span(), r_prime.span(), MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU, MLKEM512_DV);
 
     if(c_prime.len() != cipher.len()){
         panic!("Ciphertext lengths do not match");
     }
-    // if(c_prime.span() != cipher){
-    //     panic!("Decapsulation failed, ciphertexts do not match");
-    // }
-    // print!("Decapsulation succeeded, shared keys match.\n");
-    print!("Decapsulation completed\n");
-
+    if(c_prime.span() != cipher){
+        panic!("Decapsulation failed, ciphertexts do not match");
+    }
     K_prime
 }
 
@@ -337,7 +332,8 @@ fn get_z512() -> Span<u8>{
 }
 
 fn get_message512() -> Span<u8>{
-    message512.span()
+    // this is because message length is N bits after decompression with d = 1 and encode d = 1, others shared keys will not match
+    message512.span().slice(0, MLKEM_N/8)
 }
 
 pub fn get_ek() -> Span<u8>{
