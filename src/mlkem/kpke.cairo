@@ -8,15 +8,12 @@ use crate::ntt::multiply_ntt_kyber;
 use crate::zq::add_mod;
 use crate::zq::sub_mod;
 use crate::utils::array_from_span;
-use crate::utils::set_array_at;
 use crate::utils::append_n_zeroes;
 use crate::utils::byte_encode;
 use crate::utils::byte_decode;
 use crate::utils::decompress;
 use crate::utils::compress;
 use crate::utils::concat_arrays;
-use crate::utils::print_u16_span_dec;
-use crate::utils::print_u8_span_hex;
 use crate::constants::{MLKEM_ETA, MLKEM_N};
 
 /// d is random seed of 32 bytes, others are mlkem parameters

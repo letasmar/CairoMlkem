@@ -1,5 +1,5 @@
 use crate::constants::{MLKEM512_K, MLKEM512_ETA1, MLKEM512_DU,
-    MLKEM512_DV, MLKEM512_ENCAPS_K, MLKEM512_DECAPS_K, MLKEM512_CIPHER, MLKEM_SHARED_KEY_LEN, MLKEM_N};
+    MLKEM512_DV, MLKEM512_CIPHER, MLKEM_SHARED_KEY_LEN, MLKEM_N};
 use crate::mlkem::keys;
 use crate::mlkem::keyCipher;
 use crate::mlkem::keys_init;
@@ -9,7 +9,6 @@ use crate::hashes::H;
 use crate::hashes::G;
 use crate::mlkem::kpke;
 use crate::utils::array_from_span;
-use crate::utils::print_u8_span_hex;
 
 /// MLKEM-512 key generation
 /// Returns a struct containing the encapsulation key and decapsulation key
