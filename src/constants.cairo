@@ -1,5 +1,28 @@
-// parameters for MLKEM
-pub const MLKEM_N: usize = 32;
+// parameters for MLKEM - change ring size here
+pub const MLKEM_N: usize = 8;
+// NTT constants for ML-KEM
+// Modulus q = 3329
+// n = 256
+// pub const MLKEM_Q_INVN: u16 = 3303;
+
+// n = 128
+// pub const MLKEM_Q_INVN: u16 = 3277;
+
+// n = 64
+// pub const MLKEM_Q_INVN: u16 = 3225;
+
+// n = 32
+// pub const MLKEM_Q_INVN: u16 = 3121;
+
+// n = 16
+// pub const MLKEM_Q_INVN: u16 = 2913;
+
+// n = 8
+pub const MLKEM_Q_INVN: u16 = 2497;
+
+
+
+
 pub const MLKEM_Q: usize = 3329;
 pub const MLKEM_Qu16: u16 = 3329;
 pub const MLKEM_Qu64: u64 = 3329;
@@ -9,10 +32,10 @@ pub const MLKEM512_K: usize = 2;
 pub const MLKEM768_K: usize = 3;
 pub const MLKEM1024_K: usize = 4;
 
-pub const MLKEM512_DV: usize = 5;
+pub const MLKEM512_DV: usize = 4;
 pub const MLKEM768_DV: usize = 4;
 pub const MLKEM1024_DV: usize = 5;
-pub const MLKEM512_DU: usize = 11;
+pub const MLKEM512_DU: usize = 10;
 pub const MLKEM768_DU: usize = 10;
 pub const MLKEM1024_DU: usize = 11;
 
@@ -29,22 +52,18 @@ pub const MLKEM768_CIPHER: usize = 1088;
 pub const MLKEM1024_CIPHER: usize = 1568;
 
 
-// NTT constants for ML-KEM
-// Modulus q = 3329
-// n = 256
-// pub const MLKEM_Q_INVN: u16 = 3303;
-// n = 128
-// pub const MLKEM_Q_INVN: u16 = 3277;
-// n = 64
-// pub const MLKEM_Q_INVN: u16 = 3225;
-// n = 32
-pub const MLKEM_Q_INVN: u16 = 3121;
+
 
 // functions added to original file
 pub fn get_zeta(n : usize) -> Span<u16> {
     // let tmp = ArrayTrait::new();
     let mut res = ArrayTrait::new().span();
-    if n == 32 {
+    if n == 8{
+        res = Zeta_8.span();
+    }
+    else if n == 16 {
+        res = Zeta_16.span();
+    } else if n == 32 {
         res = Zeta_32.span();
     } else if n == 64 {
         res = Zeta_64.span();
@@ -63,7 +82,11 @@ pub fn get_zeta(n : usize) -> Span<u16> {
 pub fn get_zeta2(n : usize) -> Span<i16> {
     // let tmp = ArrayTrait::new();
     let mut res = ArrayTrait::new().span();
-    if n == 32 {
+    if n == 8 {
+        res = Zeta2_8.span();
+    } else if n == 16 {
+        res = Zeta2_16.span();
+    } else if n == 32 {
         res = Zeta2_32.span();
     } else if n == 64 {
         res = Zeta2_64.span();
@@ -163,4 +186,20 @@ const Zeta_32 : [ u16; 16] = [
 const Zeta2_32 : [ i16; 16] = [
     1062,    2267,    1919,    1410,     193,    3136,     797,    2532,
     2786,     543,    3260,      69,     569,    2760,    1746,    1583,
+];
+
+const Zeta_16 : [ u16; 8] = [
+    1,    1729,    2580,    3289,    2642,     630,    1897,     848,
+];
+
+const Zeta2_16 : [ i16; 8] = [
+    2642,     687,     630,    2699,    1897,    1432,     848,    2481,
+];
+
+const Zeta_8 : [ u16; 4] = [
+    1,    1729,    2580,    3289
+];
+
+const Zeta2_8 : [ i16; 4] = [
+    2580,     749,    3289,      40
 ];
