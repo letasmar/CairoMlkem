@@ -539,10 +539,14 @@ pub fn get_powers_2() -> Span<u64> {
 // for debugging
 pub fn print_u8_span_hex(arr: Span<u8>) -> () {
     for i in 0..arr.len() {
-        println!("arr.append(0x{:x});", *arr.at(i));
+        // print leading zeros for single digit hex
+        print!("0x");
+        if *arr.at(i) < 16 {
+            print!("0");
+        }
+        println!("{:x}", *arr.at(i));
     }
 }
-
 
 pub fn print_u16_span_dec(arr: Span<u16>) -> () {
     for i in 0..arr.len() {
