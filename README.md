@@ -22,15 +22,15 @@ Install Scarb, the Cairo package manager:
 https://docs.swmansion.com/scarb/download
 
 Clone the repository and cd into src:
-
+```
 git clone https://github.com/letasmar/CairoMlkem.git && cd CairoMlkem
-
+```
 Then run:
-
+```
 scarb execute
-
+```
 This executes main() from lib.cairo, performing:
-
+```
 ML-KEM key generation
 
 Encapsulation
@@ -38,3 +38,4 @@ Encapsulation
 Decapsulation
 
 Printing the shared key bytes
+```
